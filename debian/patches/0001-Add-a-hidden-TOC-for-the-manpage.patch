@@ -1,0 +1,35 @@
+From: Simon Chopin <chopin.simon@gmail.com>
+Date: Mon, 23 Jul 2012 19:50:05 +0200
+Subject: [PATCH] Add a hidden TOC for the manpage
+
+This allows to silence the warnings while making it possible to build
+the manpage from source.
+Bug: http://github.com/pazz/alot/issues/484
+diff --git a/docs/source/conf.py b/docs/source/conf.py
+index dd2cccc..a415a65 100644
+--- a/docs/source/conf.py
++++ b/docs/source/conf.py
+@@ -94,7 +94,6 @@ release = version
+ # List of patterns, relative to source directory, that match files and
+ # directories to ignore when looking for source files.
+ exclude_patterns = [
+-'manpage.rst'
+ ]
+ 
+ # The reST default role (used for this markup: `text`) to use for all documents.
+diff --git a/docs/source/index.rst b/docs/source/index.rst
+index 4742e36..9500aaa 100644
+--- a/docs/source/index.rst
++++ b/docs/source/index.rst
+@@ -17,3 +17,8 @@ User Manual
+    crypto/index
+    api/index
+    faq
++
++.. toctree::
++   :hidden:
++
++   manpage
+-- 
+1.7.10.4
+

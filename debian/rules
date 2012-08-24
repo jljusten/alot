@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python2,sphinxdoc
+
+override_dh_auto_build:
+	dh_auto_build
+	rm -rf $(CURDIR)/docs/build
+	$(MAKE) -C docs html man # The HTML generation seem to fail at generating a searchable index
+
+override_dh_auto_install:
+	dh_auto_install -- --install-lib=/usr/share/alot/
+
+override_dh_install:
+	dh_install
+	mkdir debian/alot/usr/share/alot/bin/
+	mv debian/alot/usr/bin/alot debian/alot/usr/share/alot/bin/
+	dh_link /usr/share/alot/bin/alot /usr/bin/alot
+
+override_dh_compress:
+	dh_compress -X.html -X.txt
