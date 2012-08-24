@@ -15,7 +15,7 @@ override_dh_install:
 	dh_install
 	mkdir debian/alot/usr/share/alot/bin/
 	mv debian/alot/usr/bin/alot debian/alot/usr/share/alot/bin/
-	dh_link /usr/share/alot/bin/alot /usr/bin/alot
+	dh_link -palot /usr/share/alot/bin/alot /usr/bin/alot
 
 override_dh_compress:
 	dh_compress -X.html -X.txt
