@@ -7,8 +7,7 @@ Build-Depends:
  debhelper (>= 9),
  python (>= 2.7),
  python-sphinx (>= 1.0.7+dfsg),
- python-configobj,
- python-pyme
+ python-configobj
 X-Python-Version: >= 2.7
 Standards-Version: 3.9.3
 Homepage: http://github.com/pazz/alot/
@@ -22,9 +21,9 @@ Depends:
  ${python:Depends},
  python-notmuch (>= 0.12),
  python-magic,
- python-configobj,
- python-twisted,
- python-pyme,
+ python-configobj (>= 4.6.0),
+ python-twisted (>= 10.2.0),
+ python-gpgme,
  python-urwid (>= 1.0)
 Suggests: alot-doc
 Description: Text mode MUA using notmuch mail
