@@ -2,3 +2,4 @@
 0003-Replace-non-ascii-char.patch
 0004-enable-doc-sidebar
 0005-patch-out-_templates.patch
+0006-fix-config-error-typo
