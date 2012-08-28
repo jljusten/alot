@@ -1,5 +1,5 @@
-alot (0.3.2-1) UNRELEASED; urgency=low
+alot (0.3.2-1) unstable; urgency=low
 
   * Initial release (Closes: #677522)
 
- -- Simon Chopin <chopin.simon@gmail.com>  Tue, 26 Jun 2012 23:16:15 +0200
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 28 Aug 2012 09:47:28 -0400
