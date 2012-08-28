@@ -1,7 +1,7 @@
 Description: Fix a typo in the error message for unreadble config file.
 Author: Simon Chopin <chopin.simon@gmail.com>
 Origin: vendor
-Applied-Upstream: f050a250526dfc38336150518819aa2d7bfadd72
+Forwarded: not-needed
 ---
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 --- a/alot/settings/utils.py
