@@ -1,3 +1,10 @@
+alot (0.3.3-1) UNRELEASED; urgency=low
+
+  * New upstream release.
+  * Drop all patches, either applied upstream or became irrelevant.
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 11 Sep 2012 00:31:29 +0200
+
 alot (0.3.2-1) unstable; urgency=low
 
   * Initial release (Closes: #677522)
