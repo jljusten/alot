@@ -1,3 +1,12 @@
+Description: Use local intersphinx inventories.
+ Fetching the inventories off the Internet made the build unreliable.
+ This patch turns off the intersphinx feature for notmuch and urwid since
+ they don't have a -doc sphinx package yet. This patch only makes sense in
+ the Debian context.
+Author: Simon Chopin <chopin.simon@gmail.com>
+Forwarded: not-needed
+---
+This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 --- a/docs/source/conf.py
 +++ b/docs/source/conf.py
 @@ -256,7 +256,7 @@
