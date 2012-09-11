@@ -1,0 +1,13 @@
+--- a/docs/source/conf.py
++++ b/docs/source/conf.py
+@@ -256,7 +256,7 @@
+ 
+ # Example configuration for intersphinx: refer to the Python standard library.
+ intersphinx_mapping = {
+-    'http://docs.python.org/': None,
+-    'http://notmuch.readthedocs.org/en/latest/': None,
+-    'http://urwid.readthedocs.org/en/latest/': None
++    'file:///usr/share/doc/python-doc/html/': None,
++    #'http://notmuch.readthedocs.org/en/latest/': None,
++    #'http://urwid.readthedocs.org/en/latest/': None
+ }

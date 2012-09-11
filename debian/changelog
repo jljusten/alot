@@ -2,6 +2,8 @@ alot (0.3.3-1) UNRELEASED; urgency=low
 
   * New upstream release.
   * Drop all patches, either applied upstream or became irrelevant.
+  * New patch: 0007-use-local-intersphinx-links to use local debian
+    documentation instead of fetching it on the Internet.
 
  -- Simon Chopin <chopin.simon@gmail.com>  Tue, 11 Sep 2012 00:31:29 +0200
 
