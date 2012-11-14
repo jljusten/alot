@@ -1,3 +1,9 @@
+alot (0.3.3-2) UNRELEASED; urgency=low
+
+  * debian/control: Add notmuch to the Recommends field
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Wed, 14 Nov 2012 17:37:11 +0100
+
 alot (0.3.3-1) unstable; urgency=low
 
   * New upstream release.

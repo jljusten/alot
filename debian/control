@@ -27,6 +27,7 @@ Depends:
  python-gpgme,
  python-urwid (>= 1.0)
 Suggests: alot-doc
+Recommends: notmuch
 Description: Text mode MUA using notmuch mail
  Alot is a text mode mail user agent for the notmuch mail system.
  It features a modular and command prompt driven interface to provide
