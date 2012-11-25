@@ -1,2 +1,2 @@
 version=3
-http://githubredir.debian.net/github/pazz/alot/(.*).tar.gz
+https://github.com/pazz/alot/tags .*/(\d[\d\.]+)\.tar\.gz
