@@ -1,4 +1,4 @@
-alot (0.3.4-1) UNRELEASED; urgency=low
+alot (0.3.4-1) unstable; urgency=low
 
   * New upstream release
   * debian/control: Add notmuch to the Recommends field
