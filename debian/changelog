@@ -1,8 +1,8 @@
 alot (0.3.4-1) UNRELEASED; urgency=low
 
+  * New upstream release
   * debian/control: Add notmuch to the Recommends field
   * debian/watch: Use plain github URLs instead of githubredir
-  * New upstream release
 
  -- Simon Chopin <chopin.simon@gmail.com>  Tue, 26 Mar 2013 21:23:58 +0100
 
