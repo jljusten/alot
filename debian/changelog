@@ -1,3 +1,10 @@
+alot (0.3.4-2) UNRELEASED; urgency=low
+
+  * New patch fixing ill-instantiated GPGProblem exception, thanks to 
+    Vasudev Kamath (Closes: #704884)
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 09 Apr 2013 15:33:32 +0200
+
 alot (0.3.4-1) unstable; urgency=low
 
   * New upstream release
