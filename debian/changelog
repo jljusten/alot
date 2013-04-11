@@ -1,4 +1,4 @@
-alot (0.3.4-2) UNRELEASED; urgency=low
+alot (0.3.4-2) unstable; urgency=low
 
   * New patch fixing ill-instantiated GPGProblem exception, thanks to 
     Vasudev Kamath (Closes: #704884)
