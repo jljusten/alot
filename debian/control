@@ -12,8 +12,8 @@ Build-Depends:
 X-Python-Version: >= 2.7
 Standards-Version: 3.9.3
 Homepage: http://github.com/pazz/alot/
-Vcs-Svn: svn://svn.debian.org/python-apps/packages/alot/trunk/
-Vcs-Browser: http://svn.debian.org/viewsvn/python-apps/packages/alot/trunk/
+Vcs-Svn: svn://anonscm.debian.org/python-apps/packages/alot/trunk/
+Vcs-Browser: http://anonscm.debian.org/viewvc/python-apps/packages/alot/trunk/
 
 Package: alot
 Architecture: all
