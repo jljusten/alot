@@ -1,8 +1,12 @@
 alot (0.3.4-3) UNRELEASED; urgency=low
 
+  [ Jakub Wilk ]
   * Use canonical URIs for Vcs-* fields.
 
- -- Jakub Wilk <jwilk@debian.org>  Sun, 05 May 2013 18:04:50 +0200
+  [ Simon Chopin ]
+  * Add w3m | links to Recommends to enable HTML rendering
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Thu, 30 May 2013 00:17:41 +0200
 
 alot (0.3.4-2) unstable; urgency=low
 
