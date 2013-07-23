@@ -1,4 +1,4 @@
-alot (0.3.5-1) UNRELEASED; urgency=low
+alot (0.3.5-1) unstable; urgency=low
 
   [ Jakub Wilk ]
   * Use canonical URIs for Vcs-* fields.
@@ -10,7 +10,7 @@ alot (0.3.5-1) UNRELEASED; urgency=low
   * d/copyright: Bump the copyright years
   * Bump Standard-Version to 3.9.4, no change required
 
- -- Simon Chopin <chopin.simon@gmail.com>  Tue, 23 Jul 2013 15:00:45 +0200
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 23 Jul 2013 22:51:33 +0200
 
 alot (0.3.4-2) unstable; urgency=low
 
