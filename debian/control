@@ -10,7 +10,7 @@ Build-Depends:
  python-doc,
  python-configobj
 X-Python-Version: >= 2.7
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 Homepage: http://github.com/pazz/alot/
 Vcs-Svn: svn://anonscm.debian.org/python-apps/packages/alot/trunk/
 Vcs-Browser: http://anonscm.debian.org/viewvc/python-apps/packages/alot/trunk/
