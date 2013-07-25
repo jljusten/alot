@@ -1,3 +1,11 @@
+alot (0.3.5-2) UNRELEASED; urgency=low
+
+  * Drop outdated Lintian overrides for alot-doc
+  * Add a patch to fix an encoding error in the GPG handling that prevented
+    alot from opening some threads.
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Thu, 25 Jul 2013 11:05:05 +0200
+
 alot (0.3.5-1) unstable; urgency=low
 
   [ Jakub Wilk ]
