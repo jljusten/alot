@@ -1,3 +1,12 @@
+alot (0.3.6-1) unstable; urgency=medium
+
+  * New upstream release
+    + Drop the GPG encoding patch, merged upstream.
+  * d/copyright: update copyright years.
+  * d/control: Bump Standard-Version to 3.9.5, no changes required
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Fri, 22 Aug 2014 12:58:24 +0200
+
 alot (0.3.5-2) unstable; urgency=low
 
   * Drop outdated Lintian overrides for alot-doc
