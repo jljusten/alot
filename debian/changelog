@@ -4,7 +4,7 @@ alot (0.3.7-1) unstable; urgency=medium
   * Run wrap-and-sort -a.
   * debian/control:
     - Add myself to the uploaders.
-    - Bump Standards-Version to 3.9.7.
+    - Bump Standards-Version to 3.9.8.
     - Update Homepage field.
     - Add python-setuptools and python-urwidtrees to the Build-Depends 
       field (needed by new upstream release).
