@@ -1,3 +1,26 @@
+alot (0.3.7-1) unstable; urgency=medium
+
+  * New upstream release (Closes: #814460).
+  * Run wrap-and-sort -a.
+  * debian/control:
+    - Add myself to the uploaders.
+    - Bump Standards-Version to 3.9.7.
+    - Update Homepage field.
+    - Add python-setuptools and python-urwidtrees to the Build-Depends 
+      field (needed by new upstream release).
+    - Update Vcs-* fields to use encrypted protocols (https).
+  * debian/copyright:
+    - Update copyright years.
+    - Add an entry for Hugo Lefeuvre.
+    - Update Source and Format fields.
+  * debian/patches:
+    - Fix crash when email's date is malformated (Closes: #821459).
+  * debian/rules:
+    - Remove extra timestamps from the build system when creating the
+      source archive (Closes: #784723).
+
+ -- Hugo Lefeuvre <hle@debian.org>  Wed, 24 Aug 2016 21:42:50 +0200
+
 alot (0.3.6-1) unstable; urgency=medium
 
   * New upstream release
