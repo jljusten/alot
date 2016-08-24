@@ -8,6 +8,7 @@ alot (0.3.7-1) unstable; urgency=medium
     - Update Homepage field.
     - Add python-setuptools and python-urwidtrees to the Build-Depends 
       field (needed by new upstream release).
+    - Add dh-python to the Build-Depends field.
     - Update Vcs-* fields to use encrypted protocols (https).
   * debian/copyright:
     - Update copyright years.
