@@ -25,7 +25,7 @@ Depends: python-configobj (>= 4.6.0),
          python-notmuch (>= 0.12),
          python-twisted (>= 10.2.0),
          python-urwid (>= 1.0),
-         python-urwidtrees,
+         python-urwidtrees (>= 1.0),
          ${misc:Depends},
          ${python:Depends}
 Suggests: alot-doc
