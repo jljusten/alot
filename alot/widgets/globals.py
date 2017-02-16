@@ -5,14 +5,16 @@
 """
 This contains alot-specific :class:`urwid.Widget` used in more than one mode.
 """
-import urwid
+from __future__ import absolute_import
+
 import re
 import operator
+import urwid
 
-from alot.helper import string_decode
-from alot.settings import settings
-from alot.db.attachment import Attachment
-from alot.errors import CompletionError
+from ..helper import string_decode
+from ..settings import settings
+from ..db.attachment import Attachment
+from ..errors import CompletionError
 
 
 class AttachmentWidget(urwid.WidgetWrap):
@@ -51,7 +53,7 @@ class ChoiceWidget(urwid.Text):
         self.separator = separator
 
         items = []
-        for k, v in choices.items():
+        for k, v in choices.iteritems():
             if v == select and select is not None:
                 items += ['[', k, ']:', v]
             else:
@@ -84,7 +86,7 @@ class CompleteEdit(urwid.Edit):
 
     The interpretation of some keypresses is hard-wired:
         :enter: calls 'on_exit' callback with current value
-        :esc: calls 'on_exit' with value `None`, which can be interpreted
+        :esc/ctrl g: calls 'on_exit' with value `None`, which can be interpreted
               as cancelation
         :tab: calls the completer and tabs forward in the result list
         :shift tab: tabs backward in the result list
@@ -123,6 +125,7 @@ class CompleteEdit(urwid.Edit):
         self.on_error = on_error
         self.history = list(history)  # we temporarily add stuff here
         self.historypos = None
+        self.focus_in_clist = 0
 
         if not isinstance(edit_text, unicode):
             edit_text = string_decode(edit_text)
@@ -140,7 +143,7 @@ class CompleteEdit(urwid.Edit):
                     self.completions += self.completer.complete(self.edit_text,
                                                                 self.edit_pos)
                     self.focus_in_clist = 1
-                except CompletionError, e:
+                except CompletionError as e:
                     if self.on_error is not None:
                         self.on_error(e)
 
@@ -168,7 +171,7 @@ class CompleteEdit(urwid.Edit):
                 self.set_edit_text(self.history[self.historypos])
         elif key == 'enter':
             self.on_exit(self.edit_text)
-        elif key == 'esc':
+        elif key in ('ctrl g', 'esc'):
             self.on_exit(None)
         elif key == 'ctrl a':
             self.set_edit_pos(0)
@@ -306,7 +309,7 @@ class TagWidget(urwid.AttrMap):
         return self.tag
 
     def set_focussed(self):
-        self.set_attr_map(self.attmap['focus'])
+        self.set_attr_map(self.attmaps['focus'])
 
     def set_unfocussed(self):
-        self.set_attr_map(self.attmap['normal'])
+        self.set_attr_map(self.attmaps['normal'])

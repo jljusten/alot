@@ -1,7 +1,8 @@
+from __future__ import absolute_import
 import sys
 import os
 HERE = os.path.dirname(__file__)
-sys.path.append(os.path.join(HERE, '..', '..', '..'))
+sys.path.insert(0, os.path.join(HERE, '..', '..'))
 from alot.commands import COMMANDS
 from configobj import ConfigObj
 from validate import Validator
@@ -17,7 +18,7 @@ def rewrite_entries(config, path, specpath, sec=None, sort=False):
     file = open(path, 'w')
     file.write(NOTE % specpath)
 
-    if sec == None:
+    if sec is None:
         sec = config
     if sort:
         sec.scalars.sort()
@@ -38,7 +39,8 @@ def rewrite_entries(config, path, specpath, sec=None, sort=False):
         comments = [sec.inline_comments[entry]] + sec.comments[entry]
         for c in comments:
             if c:
-                description += ' '*4 + re.sub('^\s*#', '', c) + '\n'
+                description += ' '*4 + re.sub('^\s*#', '', c)
+                description = description.rstrip(' ') + '\n'
         if etype == 'option':
             description += '\n    :type: option, one of %s\n' % eargs
         else:
@@ -46,7 +48,7 @@ def rewrite_entries(config, path, specpath, sec=None, sort=False):
                 etype = 'string list'
             description += '\n    :type: %s\n' % etype
 
-        if default != None:
+        if default is not None:
             default = default.replace('*','\\*')
             if etype in ['string', 'string_list', 'gpg_key_hint'] and default != 'None':
                 description += '    :default: "%s"\n\n' % (default)

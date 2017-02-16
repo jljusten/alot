@@ -1,12 +1,13 @@
+from __future__ import absolute_import
 import sys
 import os
 HERE = os.path.dirname(__file__)
-sys.path.append(os.path.join(HERE, '..', '..', '..'))
+sys.path.insert(0, os.path.join(HERE, '..', '..'))
 from alot.commands import *
 from alot.commands import COMMANDS
 import alot.buffers
 from argparse import HelpFormatter, SUPPRESS, OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, PARSER, REMAINDER
-from alot.utils.booleanaction import BooleanAction
+from alot.utils.argparse import BooleanAction
 from gettext import gettext as _
 import collections as _collections
 import copy as _copy
@@ -58,7 +59,7 @@ def rstify_parser(parser):
         if len(parser._positionals._group_actions) == 1:
             out += "    argument\n"
             a = parser._positionals._group_actions[0]
-            out += ' '*8 + parser._positionals._group_actions[0].help
+            out += ' '*8 + str(parser._positionals._group_actions[0].help)
             if a.choices:
                 out += ". valid choices are: %s." % ','.join(['\`%s\`' % s for s
                                                               in a.choices])

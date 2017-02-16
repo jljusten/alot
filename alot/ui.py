@@ -1,19 +1,25 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
-import urwid
-import logging
-from twisted.internet import reactor, defer
+from __future__ import absolute_import
 
-from settings import settings
-from buffers import BufferlistBuffer
-from commands import commandfactory
-from commands import CommandCanceled
-from alot.commands import CommandParseError
-from alot.helper import split_commandline
-from alot.helper import string_decode
-from alot.widgets.globals import CompleteEdit
-from alot.widgets.globals import ChoiceWidget
+import logging
+import os
+import signal
+
+from twisted.internet import reactor, defer, task
+import urwid
+
+from .settings import settings
+from .buffers import BufferlistBuffer, SearchBuffer
+from .commands import globals
+from .commands import commandfactory
+from .commands import CommandCanceled
+from .commands import CommandParseError
+from .helper import split_commandline
+from .helper import string_decode
+from .widgets.globals import CompleteEdit
+from .widgets.globals import ChoiceWidget
 
 
 class UI(object):
@@ -44,6 +50,10 @@ class UI(object):
         """interface mode identifier - type of current buffer"""
         self.commandprompthistory = []
         """history of the command line prompt"""
+        self.senderhistory = []
+        """history of the sender prompt"""
+        self.recipienthistory = []
+        """history of the recipients prompt"""
         self.input_queue = []
         """stores partial keyboard input"""
         self.last_commandline = None
@@ -68,16 +78,43 @@ class UI(object):
         mainframe = urwid.Frame(urwid.SolidFill())
         self.root_widget = urwid.AttrMap(mainframe, global_att)
 
+        signal.signal(signal.SIGINT, self.handle_signal)
+        signal.signal(signal.SIGUSR1, self.handle_signal)
+
+        # load histories
+        self._cache = os.path.join(
+            os.environ.get('XDG_CACHE_HOME', os.path.expanduser('~/.cache')),
+            'alot', 'history')
+        self._cmd_hist_file = os.path.join(self._cache, 'commands')
+        self._sender_hist_file = os.path.join(self._cache, 'senders')
+        self._recipients_hist_file = os.path.join(self._cache, 'recipients')
+        size = settings.get('history_size')
+        self.commandprompthistory = self._load_history_from_file(
+            self._cmd_hist_file, size=size)
+        self.senderhistory = self._load_history_from_file(
+            self._sender_hist_file, size=size)
+        self.recipienthistory = self._load_history_from_file(
+            self._recipients_hist_file, size=size)
+
         # set up main loop
         self.mainloop = urwid.MainLoop(self.root_widget,
-                                       handle_mouse=False,
+                                       handle_mouse=settings.get('handle_mouse'),
                                        event_loop=urwid.TwistedEventLoop(),
-                                       unhandled_input=self._unhandeled_input,
+                                       unhandled_input=self._unhandled_input,
                                        input_filter=self._input_filter)
+
+        # Create a defered that calls the loop_hook
+        loop_hook = settings.get_hook('loop_hook')
+        if loop_hook:
+            loop = task.LoopingCall(loop_hook, ui=self)
+            loop_defered = loop.start(settings.get('periodic_hook_frequency'))
+            loop_defered.addErrback(
+                lambda e: logging.error('error in loop hook %s',
+                                        e.getErrorMessage()))
 
         # set up colours
         colourmode = int(settings.get('colourmode'))
-        logging.info('setup gui in %d colours' % colourmode)
+        logging.info('setup gui in %d colours', colourmode)
         self.mainloop.screen.set_terminal_properties(colors=colourmode)
 
         logging.debug('fire first command')
@@ -85,6 +122,19 @@ class UI(object):
 
         # start urwids mainloop
         self.mainloop.run()
+
+    def _error_handler(self, failure):
+        """Default handler for exceptions in callbacks."""
+        if failure.check(CommandParseError):
+            self.notify(failure.getErrorMessage(), priority='error')
+        elif failure.check(CommandCanceled):
+            self.notify("operation cancelled", priority='error')
+        else:
+            logging.error(failure.getTraceback())
+            errmsg = failure.getErrorMessage()
+            if errmsg:
+                msg = "{}\n(check the log for details)".format(errmsg)
+                self.notify(msg, priority='error')
 
     def _input_filter(self, keys, raw):
         """
@@ -94,7 +144,7 @@ class UI(object):
         to let the root widget handle keys. We intercept the input here
         to trigger custom commands as defined in our keybindings.
         """
-        logging.debug("Got key (%s, %s)" % (keys, raw))
+        logging.debug("Got key (%s, %s)", keys, raw)
         # work around: escape triggers this twice, with keys = raw = []
         # the first time..
         if not keys:
@@ -111,19 +161,19 @@ class UI(object):
                 self._unlock_callback()
         # otherwise interpret keybinding
         else:
-            # define callback that resets input queue
-            def clear(*args):
+            def clear(*_):
+                """Callback that resets the input queue."""
                 if self._alarm is not None:
                     self.mainloop.remove_alarm(self._alarm)
                 self.input_queue = []
 
-            def fire(ignored, cmdline):
+            def fire(_, cmdline):
                 clear()
-                logging.debug("cmdline: '%s'" % cmdline)
+                logging.debug("cmdline: '%s'", cmdline)
                 if not self._locked:
                     try:
                         self.apply_commandline(cmdline)
-                    except CommandParseError, e:
+                    except CommandParseError as e:
                         self.notify(e.message, priority='error')
                 # move keys are always passed
                 elif cmdline in ['move up', 'move down', 'move page up',
@@ -131,6 +181,8 @@ class UI(object):
                     return [cmdline[5:]]
 
             key = keys[0]
+            if key and 'mouse' in key[0]:
+                key = key[0] + ' %i' % key[1]
             self.input_queue.append(key)
             keyseq = ' '.join(self.input_queue)
             candidates = settings.get_mapped_input_keysequences(self.mode,
@@ -184,16 +236,10 @@ class UI(object):
         # one callback may return a Deferred and thus postpone the application
         # of the next callback (and thus Command-application)
 
-        def apply_this_command(ignored, cmdstring):
-            logging.debug('%s command string: "%s"' % (self.mode,
-                                                       str(cmdstring)))
-            #logging.debug('CMDSEQ: apply %s' % str(cmdstring))
+        def apply_this_command(_, cmdstring):
+            logging.debug('%s command string: "%s"', self.mode, str(cmdstring))
             # translate cmdstring into :class:`Command`
-            #try:
             cmd = commandfactory(cmdstring, self.mode)
-            #except CommandParseError, e:
-             #   self.notify(e.message, priority='error')
-              #  return
             # store cmdline for use with 'repeat' command
             if cmd.repeatable:
                 self.last_commandline = cmdline
@@ -207,28 +253,18 @@ class UI(object):
         for cmdstring in split_commandline(cmdline):
             d.addCallback(apply_this_command, cmdstring)
 
-        # add sequence-wide error handler
-        def errorHandler(failure):
-            if failure.check(CommandParseError):
-                self.notify(failure.getErrorMessage(), priority='error')
-            elif failure.check(CommandCanceled):
-                self.notify("operation cancelled", priority='error')
-            else:
-                logging.error(failure.getTraceback())
-                errmsg = failure.getErrorMessage()
-                if errmsg:
-                    msg = "%s\n(check the log for details)"
-                    self.notify(msg % errmsg, priority='error')
-        d.addErrback(errorHandler)
+        d.addErrback(self._error_handler)
+
         return d
 
-    def _unhandeled_input(self, key):
+    @staticmethod
+    def _unhandled_input(key):
         """
         Called by :class:`urwid.MainLoop` if a keypress was passed to the root
         widget by `self._input_filter` but is not handled in any widget. We
         keep it for debuging purposes.
         """
-        logging.debug('unhandled input: %s' % key)
+        logging.debug('unhandled input: %s', key)
 
     def show_as_root_until_keypress(self, w, key, afterwards=None):
         """
@@ -242,7 +278,7 @@ class UI(object):
         self._unlock_callback = afterwards
         self._locked = True
 
-    def prompt(self, prefix, text=u'', completer=None, tab=0, history=[]):
+    def prompt(self, prefix, text=u'', completer=None, tab=0, history=None):
         """
         prompt for text input.
         This returns a :class:`~twisted.defer.Deferred` that calls back with
@@ -261,12 +297,14 @@ class UI(object):
         :type history: list of str
         :rtype: :class:`twisted.defer.Deferred`
         """
+        history = history or []
+
         d = defer.Deferred()  # create return deferred
         oldroot = self.mainloop.widget
 
         def select_or_cancel(text):
-            # restore main screen and invoke callback
-            # (delayed return) with given text
+            """Restore the main screen and invoce the callback (delayed return)
+            with the given text."""
             self.mainloop.widget = oldroot
             self._passall = False
             d.callback(text)
@@ -285,7 +323,7 @@ class UI(object):
                                 edit_text=text, history=history,
                                 on_error=cerror)
 
-        for i in range(tab):  # hit some tabs
+        for _ in xrange(tab):  # hit some tabs
             editpart.keypress((0,), 'tab')
 
         # build promptwidget
@@ -307,7 +345,8 @@ class UI(object):
         self._passall = True
         return d  # return deferred
 
-    def exit(self):
+    @staticmethod
+    def exit():
         """
         shuts down user interface without cleaning up.
         Use a :class:`alot.commands.globals.ExitCommand` for a clean shutdown.
@@ -317,7 +356,7 @@ class UI(object):
             reactor.stop()
         except Exception as e:
             exit_msg = 'Could not stop reactor: {}.'.format(e)
-            logging.error(exit_msg + '\nShutting down anyway..')
+            logging.error('%s\nShutting down anyway..', exit_msg)
 
     def buffer_open(self, buf):
         """register and focus new :class:`~alot.buffers.Buffer`."""
@@ -355,10 +394,10 @@ class UI(object):
         buffers = self.buffers
         success = False
         if buf not in buffers:
-            string = 'tried to close unknown buffer: %s. \n\ni have:%s'
-            logging.error(string % (buf, self.buffers))
+            logging.error('tried to close unknown buffer: %s. \n\ni have:%s',
+                          buf, self.buffers)
         elif self.current_buffer == buf:
-            logging.info('closing current buffer %s' % buf)
+            logging.info('closing current buffer %s', buf)
             index = buffers.index(buf)
             buffers.remove(buf)
             offset = settings.get('bufferclose_focus_offset')
@@ -367,7 +406,6 @@ class UI(object):
             buf.cleanup()
             success = True
         else:
-            string = 'closing buffer %d:%s'
             buffers.remove(buf)
             buf.cleanup()
             success = True
@@ -423,7 +461,7 @@ class UI(object):
         :type t: alot.buffers.Buffer
         :rtype: list
         """
-        return filter(lambda x: isinstance(x, t), self.buffers)
+        return [x for x in self.buffers if isinstance(x, t)]
 
     def clear_notify(self, messages):
         """
@@ -443,8 +481,8 @@ class UI(object):
             self._notificationbar = None
         self.update()
 
-    def choice(self, message, choices={'y': 'yes', 'n': 'no'},
-               select=None, cancel=None, msg_position='above'):
+    def choice(self, message, choices=None, select=None, cancel=None,
+               msg_position='above'):
         """
         prompt user to make a choice.
 
@@ -463,14 +501,17 @@ class UI(object):
         :type msg_position: str
         :rtype:  :class:`twisted.defer.Deferred`
         """
-        assert select in choices.values() + [None]
-        assert cancel in choices.values() + [None]
+        choices = choices or {'y': 'yes', 'n': 'no'}
+        assert select is None or select in choices.itervalues()
+        assert cancel is None or cancel in choices.itervalues()
         assert msg_position in ['left', 'above']
 
         d = defer.Deferred()  # create return deferred
         oldroot = self.mainloop.widget
 
         def select_or_cancel(text):
+            """Restore the main screen and invoce the callback (delayed return)
+            with the given text."""
             self.mainloop.widget = oldroot
             self._passall = False
             d.callback(text)
@@ -535,7 +576,7 @@ class UI(object):
             self._notificationbar = urwid.Pile(newpile)
         self.update()
 
-        def clear(*args):
+        def clear(*_):
             self.clear_notify(msgs)
 
         if block:
@@ -624,8 +665,8 @@ class UI(object):
         :type cmd: :class:`~alot.commands.Command`
         """
         if cmd:
-            # define (callback) function that invokes post-hook
-            def call_posthook(retval_from_apply):
+            def call_posthook(_):
+                """Callback function that will invoke the post-hook."""
                 if cmd.posthook:
                     logging.info('calling post-hook')
                     return defer.maybeDeferred(cmd.posthook,
@@ -634,11 +675,91 @@ class UI(object):
                                                cmd=cmd)
 
             # call cmd.apply
-            def call_apply(ignored):
+            def call_apply(_):
                 return defer.maybeDeferred(cmd.apply, self)
 
             prehook = cmd.prehook or (lambda **kwargs: None)
             d = defer.maybeDeferred(prehook, ui=self, dbm=self.dbman, cmd=cmd)
             d.addCallback(call_apply)
-            d.addCallback(call_posthook)
+            d.addCallbacks(call_posthook, self._error_handler)
             return d
+
+    def handle_signal(self, signum, frame):
+        """
+        handles UNIX signals
+
+        This function currently just handles SIGUSR1. It could be extended to
+        handle more
+
+        :param signum: The signal number (see man 7 signal)
+        :param frame: The execution frame
+            (https://docs.python.org/2/reference/datamodel.html#frame-objects)
+        """
+        # it is a SIGINT ?
+        if signum == signal.SIGINT:
+            logging.info('shut down cleanly')
+            self.apply_command(globals.ExitCommand())
+        elif signum == signal.SIGUSR1:
+            if isinstance(self.current_buffer, SearchBuffer):
+                self.current_buffer.rebuild()
+                self.update()
+
+    def cleanup(self):
+        """Do the final clean up before shutting down."""
+        size = settings.get('history_size')
+        self._save_history_to_file(self.commandprompthistory,
+                                   self._cmd_hist_file, size=size)
+        self._save_history_to_file(self.senderhistory, self._sender_hist_file,
+                                   size=size)
+        self._save_history_to_file(self.recipienthistory,
+                                   self._recipients_hist_file, size=size)
+
+    @staticmethod
+    def _load_history_from_file(path, size=-1):
+        """Load a history list from a file and split it into lines.
+
+        :param path: the path to the file that should be loaded
+        :type path: str
+        :param size: the number of lines to load (0 means no lines, < 0 means
+            all lines)
+        :type size: int
+        :returns: a list of history items (the lines of the file)
+        :rtype: list(str)
+        """
+        if size == 0:
+            return []
+        if os.path.exists(path):
+            with open(path) as histfile:
+                lines = [line.rstrip('\n') for line in histfile]
+            if size > 0:
+                lines = lines[-size:]
+            return lines
+        else:
+            return []
+
+    @staticmethod
+    def _save_history_to_file(history, path, size=-1):
+        """Save a history list to a file for later loading (possibly in another
+        session).
+
+        :param history: the history list to save
+        :type history: list(str)
+        :param path: the path to the file where to save the history
+        :param size: the number of lines to save (0 means no lines, < 0 means
+            all lines)
+        :type size: int
+        :type path: str
+        :returns: None
+        """
+        if size == 0:
+            return
+        if size > 0:
+            history = history[-size:]
+        directory = os.path.dirname(path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        # Write linewise to avoid building a large string in menory.
+        with open(path, 'w') as histfile:
+            for line in history:
+                histfile.write(line)
+                histfile.write('\n')

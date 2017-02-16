@@ -1,13 +1,15 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
+from __future__ import absolute_import
+
 from configobj import ConfigObj, ConfigObjError, flatten_errors
 from validate import Validator
-from errors import ConfigError
 from urwid import AttrSpec
 
+from .errors import ConfigError
 
-def read_config(configpath=None, specpath=None, checks={}):
+def read_config(configpath=None, specpath=None, checks=None):
     """
     get a (validated) config object for given config file path.
 
@@ -21,13 +23,16 @@ def read_config(configpath=None, specpath=None, checks={}):
     :raises: :class:`~alot.settings.errors.ConfigError`
     :rtype: `configobj.ConfigObj`
     """
+    checks = checks or {}
+
     try:
         config = ConfigObj(infile=configpath, configspec=specpath,
                            file_error=True, encoding='UTF8')
     except ConfigObjError as e:
         raise ConfigError(e)
     except IOError:
-        raise ConfigError('Could not read %s' % configpath)
+        raise ConfigError('Could not read %s and/or %s'
+                          % (configpath, specpath))
     except UnboundLocalError:
         # this works around a bug in configobj
         msg = '%s is malformed. Check for sections without parents..'

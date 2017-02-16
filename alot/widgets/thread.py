@@ -4,16 +4,18 @@
 """
 Widgets specific to thread mode
 """
-import urwid
-import logging
+from __future__ import absolute_import
 
-from alot.settings import settings
-from alot.db.utils import decode_header, X_SIGNATURE_MESSAGE_HEADER
-from alot.helper import tag_cmp
-from alot.widgets.globals import TagWidget
-from alot.widgets.globals import AttachmentWidget
-from alot.foreign.urwidtrees import Tree, SimpleTree, CollapsibleTree
-from alot.db.utils import extract_body
+import logging
+import urwid
+from urwidtrees import Tree, SimpleTree, CollapsibleTree
+
+from .globals import TagWidget
+from .globals import AttachmentWidget
+from ..settings import settings
+from ..db.utils import decode_header, X_SIGNATURE_MESSAGE_HEADER
+from ..db.utils import extract_body
+from ..helper import tag_cmp
 
 
 class MessageSummaryWidget(urwid.WidgetWrap):
@@ -42,9 +44,14 @@ class MessageSummaryWidget(urwid.WidgetWrap):
         txt = urwid.Text(sumstr)
         cols.append(txt)
 
-        thread_tags = message.get_thread().get_tags(intersection=True)
-        outstanding_tags = set(message.get_tags()).difference(thread_tags)
-        tag_widgets = [TagWidget(t, attr, focus_att) for t in outstanding_tags]
+        if settings.get('msg_summary_hides_threadwide_tags'):
+            thread_tags = message.get_thread().get_tags(intersection=True)
+            outstanding_tags = set(message.get_tags()).difference(thread_tags)
+            tag_widgets = [TagWidget(t, attr, focus_att)
+                           for t in outstanding_tags]
+        else:
+            tag_widgets = [TagWidget(t, attr, focus_att)
+                           for t in message.get_tags()]
         tag_widgets.sort(tag_cmp, lambda tag_widget: tag_widget.translated)
         for tag_widget in tag_widgets:
             if not tag_widget.hidden:
@@ -144,7 +151,7 @@ class MessageTree(CollapsibleTree):
     """
     def __init__(self, message, odd=True):
         """
-        :param message: Messag to display
+        :param message: Message to display
         :type message: alot.db.Message
         :param odd: theme summary widget as if this is an odd line
                     (in the message-pile)
@@ -175,13 +182,13 @@ class MessageTree(CollapsibleTree):
         self.reassemble()
 
     def debug(self):
-        logging.debug('collapsed %s' % self.is_collapsed(self.root))
-        logging.debug('display_source %s' % self.display_source)
-        logging.debug('display_all_headers %s' % self.display_all_headers)
-        logging.debug('display_attachements %s' % self.display_attachments)
-        logging.debug('AHT %s' % str(self._all_headers_tree))
-        logging.debug('DHT %s' % str(self._default_headers_tree))
-        logging.debug('MAINTREE %s' % str(self._maintree._treelist))
+        logging.debug('collapsed %s', self.is_collapsed(self.root))
+        logging.debug('display_source %s', self.display_source)
+        logging.debug('display_all_headers %s', self.display_all_headers)
+        logging.debug('display_attachements %s', self.display_attachments)
+        logging.debug('AHT %s', str(self._all_headers_tree))
+        logging.debug('DHT %s', str(self._default_headers_tree))
+        logging.debug('MAINTREE %s', str(self._maintree._treelist))
 
     def _assemble_structure(self):
         mainstruct = []
@@ -235,13 +242,6 @@ class MessageTree(CollapsibleTree):
                 self._bodytree = TextlinesList(bodytxt, att, att_focus)
         return self._bodytree
 
-    def replace_bodytext(self, txt):
-        """display txt instead of current msg 'body'"""
-        if txt:
-            att = settings.get_theming_attribute('thread', 'body')
-            att_focus = settings.get_theming_attribute('thread', 'body_focus')
-            self._bodytree = TextlinesList(txt, att, att_focus)
-
     def _get_headers(self):
         if self.display_all_headers is True:
             if self._all_headers_tree is None:
@@ -271,7 +271,7 @@ class MessageTree(CollapsibleTree):
         if headers is None:
             # collect all header/value pairs in the order they appear
             headers = mail.keys()
-            for key, value in mail.items():
+            for key, value in mail.iteritems():
                 dvalue = decode_header(value, normalize=normalize)
                 lines.append((key, dvalue))
         else:
@@ -355,22 +355,23 @@ class ThreadTree(Tree):
 
     # Tree API
     def __getitem__(self, pos):
-        return self._message.get(pos, None)
+        return self._message.get(pos)
 
     def parent_position(self, pos):
-        return self._parent_of.get(pos, None)
+        return self._parent_of.get(pos)
 
     def first_child_position(self, pos):
-        return self._first_child_of.get(pos, None)
+        return self._first_child_of.get(pos)
 
     def last_child_position(self, pos):
-        return self._last_child_of.get(pos, None)
+        return self._last_child_of.get(pos)
 
     def next_sibling_position(self, pos):
-        return self._next_sibling_of.get(pos, None)
+        return self._next_sibling_of.get(pos)
 
     def prev_sibling_position(self, pos):
-        return self._prev_sibling_of.get(pos, None)
+        return self._prev_sibling_of.get(pos)
 
-    def position_of_messagetree(self, mt):
+    @staticmethod
+    def position_of_messagetree(mt):
         return mt._message.get_message_id()

@@ -34,6 +34,16 @@
     :default: True
 
 
+.. _auto-replyto-mailinglist:
+
+.. describe:: auto_replyto_mailinglist
+
+     Automatically switch to list reply mode if appropriate
+
+    :type: boolean
+    :default: False
+
+
 .. _bounce-force-address:
 
 .. describe:: bounce_force_address
@@ -72,7 +82,7 @@
 
      Format of the status-bar in bufferlist mode.
      This is a pair of strings to be left and right aligned in the status-bar that may contain variables:
-    
+
      * `{buffer_no}`: index of this buffer in the global buffer list
      * `{total_messages}`: total numer of messages indexed by notmuch
      * `{pending_writes}`: number of pending write operations to the index
@@ -182,7 +192,7 @@
 
 .. describe:: editor_spawn
 
-     use terminal_cmd to spawn a new terminal for the editor?
+     use terminal_command to spawn a new terminal for the editor?
      equivalent to always providing the `--spawn=yes` parameter to compose/edit commands
 
     :type: boolean
@@ -217,7 +227,7 @@
      This is a pair of strings to be left and right aligned in the status-bar.
      Apart from the global variables listed at :ref:`bufferlist_statusbar <bufferlist-statusbar>`
      these strings may contain variables:
-    
+
      * `{to}`: To-header of the envelope
 
     :type: mixed_list
@@ -228,7 +238,8 @@
 
 .. describe:: flush_retry_timeout
 
-     timeout in seconds after a failed attempt to writeout the database is repeated
+     timeout in seconds after a failed attempt to writeout the database is
+     repeated. Set to 0 for no retry.
 
     :type: integer
     :default: 5
@@ -276,6 +287,29 @@
 
     :type: string
     :default: "Fwd: "
+
+
+.. _handle-mouse:
+
+.. describe:: handle_mouse
+
+     enable mouse support - mouse tracking will be handled by urwid
+
+    :type: boolean
+    :default: False
+
+
+.. _history-size:
+
+.. describe:: history_size
+
+     The number of command line history entries to save
+
+     .. note:: You can set this to -1 to save *all* entries to disk but the
+               history file might get *very* long.
+
+    :type: integer
+    :default: 50
 
 
 .. _honor-followup-to:
@@ -330,6 +364,17 @@
     :default: ,
 
 
+.. _msg-summary-hides-threadwide-tags:
+
+.. describe:: msg_summary_hides_threadwide_tags
+
+     In a thread buffer, hide from messages summaries tags that are commom to all
+     messages in that thread.
+
+    :type: boolean
+    :default: True
+
+
 .. _notify-timeout:
 
 .. describe:: notify_timeout
@@ -338,6 +383,16 @@
 
     :type: integer
     :default: 2
+
+
+.. _periodic-hook-frequency:
+
+.. describe:: periodic_hook_frequency
+
+     The number of seconds to wait between calls to the loop_hook
+
+    :type: integer
+    :default: 300
 
 
 .. _prefer-plaintext:
@@ -393,6 +448,19 @@
     :default: "> "
 
 
+.. _reply-account-header-priority:
+
+.. describe:: reply_account_header_priority
+
+     The list of headers to match to determine sending account for a reply.
+     Headers are searched in the order in which they are specified here, and the first header
+     containing a match is used. If multiple accounts match in that header, the one defined
+     first in the account block is used.
+
+    :type: string list
+    :default: From, To, Cc, Envelope-To, X-Envelope-To, Delivered-To
+
+
 .. _reply-force-address:
 
 .. describe:: reply_force_address
@@ -434,7 +502,7 @@
      This is a pair of strings to be left and right aligned in the status-bar.
      Apart from the global variables listed at :ref:`bufferlist_statusbar <bufferlist-statusbar>`
      these strings may contain variables:
-    
+
      * `{querystring}`: search string
      * `{result_count}`: number of matching messages
      * `{result_count_positive}`: 's' if result count is greater than 0.
@@ -538,6 +606,17 @@
     :default: "Me"
 
 
+.. _thread-authors-order-by:
+
+.. describe:: thread_authors_order_by
+
+     When constructing the unique list of thread authors, order by date of
+     author's first or latest message in thread
+
+    :type: option, one of ['first_message', 'latest_message']
+    :default: first_message
+
+
 .. _thread-authors-replace-me:
 
 .. describe:: thread_authors_replace_me
@@ -557,7 +636,7 @@
      This is a pair of strings to be left and right aligned in the status-bar.
      Apart from the global variables listed at :ref:`bufferlist_statusbar <bufferlist-statusbar>`
      these strings may contain variables:
-    
+
      * `{tid}`: thread id
      * `{subject}`: subject line of the thread
      * `{authors}`: abbreviated authors string for this thread
@@ -565,6 +644,22 @@
 
     :type: mixed_list
     :default: [{buffer_no}: thread] {subject}, {input_queue} total messages: {total_messages}
+
+
+.. _thread-subject:
+
+.. describe:: thread_subject
+
+     What should be considered to be "the thread subject".
+     Valid values are:
+
+     * 'notmuch' (the default), will use the thread subject from notmuch, which
+       depends on the selected sorting method
+     * 'oldest' will always use the subject of the oldest message in the thread as
+       the thread subject
+
+    :type: option, one of ['oldest', 'notmuch']
+    :default: notmuch
 
 
 .. _timestamp-format:

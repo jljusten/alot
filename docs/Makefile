@@ -6,6 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
+PYTHON        = python
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -42,14 +43,17 @@ help:
 	@echo "  linkcheck  to check all external links for integrity"
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 
-$(COMMAND_OPTION_TABLES):
-	python source/generate_commands.py
+$(COMMAND_OPTION_TABLES): ../alot/commands/__init__.py
+	$(PYTHON) source/generate_commands.py
 
-$(CONFIG_OPTION_TABLES):
-	python source/generate_configs.py
+$(CONFIG_OPTION_TABLES): ../alot/defaults/alot.rc.spec
+	$(PYTHON) source/generate_configs.py
 
 clean:
-	-rm -rf $(BUILDDIR)/*
+	-$(RM) -rf $(BUILDDIR)/*
+
+cleanall: clean
+	-$(RM) -rf $(CONFIG_OPTION_TABLES) $(COMMAND_OPTION_TABLES)
 
 html: $(CONFIG_OPTION_TABLES) $(COMMAND_OPTION_TABLES)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html

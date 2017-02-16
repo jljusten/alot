@@ -1,0 +1,117 @@
+language: python
+
+# Cache pip objects to speed up next build
+cache:
+  pip: True
+  directories:
+    - $HOME/.ccache
+
+
+# We need a newer version of zlib to build notmuch from source as is available
+# in precise.
+dist: trusty
+
+python:
+  # We can add more version strings here when we support other python
+  # versions.
+  - "2.7"
+
+# We start two containers in parallel, one to check and build the docs and the
+# other to run the test suite.
+env:
+  - JOB=docs
+  - JOB=tests
+
+addons:
+  apt:
+    packages:
+      # The gpgme build files are needed by the gpgme python module
+      # (a dependency of alot).
+      - libgpgme11-dev
+      # The notmuch libs are needed to actually run alot.  But currently the
+      # available version is not compatible with alot, so we have to build
+      # from source.
+      #- notmuch
+      # Dependencies to build notmuch from source.
+      - libxapian-dev
+      - libtalloc-dev
+      - zlib1g-dev
+      - libgmime-2.6-dev
+
+# Build notmuch and the python notmuch libs manually.  The versions of the
+# notmuch library and the python module which are available in the 12.04 and
+# 14.04 Ubuntu repos do not match and do not fullfill the version requirement
+# for alot.
+before_install: |
+  set -e
+  if [[ $JOB = tests ]]; then
+    # Build with ccache to speed up rebuilds.
+    export PATH=/usr/lib/ccache:$PATH
+
+    # Clone the notmuch repository and move into it.
+    git clone git://notmuchmail.org/git/notmuch
+    cd notmuch
+    # Make and install the library.  We install the library without sudo as we
+    # might want to switch to the travis container later.
+    ./configure --prefix=$HOME/.local
+    make
+    make install
+    # Export the library search path.
+    export LD_LIBRARY_PATH=$HOME/.local/lib
+    # Install the python bindings.
+    cd bindings/python
+    pip install .
+    # Move out of the notmuch dir again.
+    cd ../../..
+  fi
+
+# Prepare a minimal config file for the test.
+before_script: |
+  set -e
+  if [[ $JOB = tests ]]; then
+    touch ~/.notmuch-config
+    echo 'initial_command=call os._exit(0)' > conf
+  fi
+
+# Install or mock dependencies for alot as the package has to be imported
+# during generation of the docs.
+install:
+  # urwid needs to be installed first.  The installation of urwidtrees will
+  # fail otherwise.
+  # TODO This should be fixed upstream.
+  - pip install urwid
+  # Install alot and the dependencies it declares.
+  - |
+    set -e
+    if [[ $JOB = docs ]]; then
+      pip install configobj twisted python-magic urwidtrees
+      # Mock all "difficult" dependencies of alot in order to be able to import
+      # alot when rebuilding the documentation.  Notmuch would have to be
+      # installed by hand in order to get a recent enough version on travis.
+      printf '%s = None\n' NotmuchError NullPointerError > notmuch.py
+      touch gpgme.py
+      # install sphinx for building the html docs
+      pip install sphinx==1.5.1
+    else
+      pip install .[test]
+    fi
+
+script: |
+  set -e
+  if [[ $JOB = docs ]]; then
+    # First remove the auto generated documentation source files.
+    make -C docs cleanall
+    # Regenerate them (run "true" instead of sphinx-build to speed things up).
+    make -C docs html SPHINXBUILD=true
+    # Check that the generated docs where already commited.
+    git diff --exit-code
+    # Generate the html docs and turn all warnings into errors.
+    make -C docs html SPHINXBUILD='sphinx-build -W'
+  else
+    alot --config conf
+    python setup.py test
+  fi
+
+notifications:
+    irc: "chat.freenode.net#alot"
+    on_success: change

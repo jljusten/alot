@@ -1,3 +1,36 @@
+0.5:
+* save command prompt, recipient and sender history across program restarts
+* new config option: "handle_mouse" to enable interpretation of mouse events
+* prompt for unsent messages before closing
+* enable variable interpolation in config file
+* Add encryption to CC addresses
+* Add bufferlist, tablist and pyshell subcommands to the command line interface
+* new hook: "loop_hook", that runs periodically
+* new config option: "periodic_hook_frequency" to adjust how often to fire "loop_hook"
+
+0.4:
+* signal: refresh current buffer on SIGUSR1
+* signal: exit interface on SIGINT
+* interpret C-g keybinding in prompts
+* new config option:encrypt_by_default
+* new config option: thread_authors_order_by
+* indicate untrusted PGP signatures in thread view
+* more flexible account selection for replies
+
+
+0.3.7:
+* new config option: msg_summary_hides_threadwide_tags
+* new config setting: thread_subject
+* new hook: sanitize_attachment_filename
+* new hook: exit()
+* list replies (new command parameter and config setting: auto_replyto_mailinglist)
+* new config setting for accounts: encrypt_by_default
+* new config setting for accounts: alias_regexp
+* new config setting for abooks: shellcommand_external_filtering
+* switched to setuptools
+* detached urwidtrees library into separate project (and new dependency)
+
+
 0.3.6:
 * implement vim-style "move last" command (bound to G)
 * fixes in reply/forwarding

@@ -1,27 +1,29 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
-from notmuch import Database, NotmuchError, XapianError
-import notmuch
-import multiprocessing
-import logging
-import sys
-import os
-import errno
-import signal
-from twisted.internet import reactor
+from __future__ import absolute_import
 
 from collections import deque
+import errno
+import logging
+import multiprocessing
+import os
+import signal
+import sys
 
-from message import Message
-from alot.settings import settings
-from thread import Thread
+from notmuch import Database, NotmuchError, XapianError
+import notmuch
+from twisted.internet import reactor
+
+from . import DB_ENC
 from .errors import DatabaseError
 from .errors import DatabaseLockedError
 from .errors import DatabaseROError
 from .errors import NonexistantObjectError
-from alot.db import DB_ENC
-from alot.db.utils import is_subdir_of
+from .message import Message
+from .thread import Thread
+from .utils import is_subdir_of
+from ..settings import settings
 
 
 class FillPipeProcess(multiprocessing.Process):
@@ -114,7 +116,7 @@ class DBManager(object):
             # go through writequeue entries
             while self.writequeue:
                 current_item = self.writequeue.popleft()
-                logging.debug('write-out item: %s' % str(current_item))
+                logging.debug('write-out item: %s', str(current_item))
 
                 # watch out for notmuch errors to re-insert current_item
                 # to the queue on errors
@@ -138,8 +140,7 @@ class DBManager(object):
                     if cmd == 'add':
                         logging.debug('add')
                         path, tags = current_item[2:]
-                        msg, status = db.add_message(path,
-                                                     sync_maildir_flags=sync)
+                        msg, _ = db.add_message(path, sync_maildir_flags=sync)
                         logging.debug('added msg')
                         msg.freeze()
                         logging.debug('freeze')
@@ -269,16 +270,6 @@ class DBManager(object):
         """returns number of threads that match `querystring`"""
         return self.query(querystring).count_threads()
 
-    def search_thread_ids(self, querystring):
-        """
-        returns the ids of all threads that match the `querystring`
-        This copies! all integer thread ids into an new list.
-
-        :returns: list of str
-        """
-
-        return self.query_threaded(querystring)
-
     def _get_notmuch_thread(self, tid):
         """returns :class:`notmuch.database.Thread` with given id"""
         query = self.query('thread:' + tid)
@@ -339,7 +330,7 @@ class DBManager(object):
         process = FillPipeProcess(cbl(), stdout[1], stderr[1], pipe, fun)
         process.start()
         self.processes.append(process)
-        logging.debug('Worker process {0} spawned'.format(process.pid))
+        logging.debug('Worker process %s spawned', process.pid)
 
         def threaded_wait():
             # wait(2) for the process to die
@@ -352,7 +343,7 @@ class DBManager(object):
             else:
                 msg = 'exited successfully'
 
-            logging.debug('Worker process {0} {1}'.format(process.pid, msg))
+            logging.debug('Worker process %s %s', process.pid, msg)
             self.processes.remove(process)
 
         # spawn a thread to collect the worker process once it dies
@@ -362,8 +353,8 @@ class DBManager(object):
         def threaded_reader(prefix, fd):
             with os.fdopen(fd) as handle:
                 for line in handle:
-                    logging.debug('Worker process {0} said on {1}: {2}'.format(
-                        process.pid, prefix, line.rstrip()))
+                    logging.debug('Worker process %s said on %s: %s',
+                                  process.pid, prefix, line.rstrip())
 
         # spawn two threads that read from the stdout and stderr pipes
         # and write anything that appears there to the log
@@ -391,7 +382,7 @@ class DBManager(object):
         :rtype: (:class:`multiprocessing.Pipe`,
                 :class:`multiprocessing.Process`)
         """
-        assert sort in self._sort_orders.keys()
+        assert sort in self._sort_orders
         q = self.query(querystring)
         q.set_sort(self._sort_orders[sort])
         return self.async(q.search_threads, (lambda a: a.get_thread_id()))
@@ -408,7 +399,7 @@ class DBManager(object):
         db = Database(path=self.path, mode=mode)
         return db.create_query(querystring)
 
-    def add_message(self, path, tags=[], afterwards=None):
+    def add_message(self, path, tags=None, afterwards=None):
         """
         Adds a file to the notmuch index.
 
@@ -419,6 +410,8 @@ class DBManager(object):
         :param afterwards: callback to trigger after adding
         :type afterwards: callable or None
         """
+        tags = tags or []
+
         if self.ro:
             raise DatabaseROError()
         if not is_subdir_of(path, self.path):

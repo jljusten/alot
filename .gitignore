@@ -1,11 +1,16 @@
 *.py[co]
 *.log
 *.swp
+*.egg-info/
+/bin
 /build
 /dist
+/include
+/lib
+/lib64
 /MANIFEST
 .gdb_history
 docs/build
 docs/source/configuration/*table.rst
-/alot/VERSION
 tags
+.eggs

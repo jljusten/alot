@@ -10,6 +10,7 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
+from __future__ import absolute_import
 
 import sys, os
 
@@ -26,7 +27,7 @@ class Mock(object):
         return Mock()
 
     @classmethod
-    def __getattr__(self, name):
+    def __getattr__(cls, name):
         return Mock() if name not in ('__file__', '__path__') else '/dev/null'
 
 MOCK_MODULES = ['notmuch', 'notmuch.globals',

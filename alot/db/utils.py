@@ -1,26 +1,29 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
+from __future__ import absolute_import
+
 import os
 import email
+import email.charset as charset
+from email.header import Header
+from email.iterators import typed_subpart_iterator
 import tempfile
 import re
-from email.header import Header
-import email.charset as charset
-charset.add_charset('utf-8', charset.QP, charset.QP, 'utf-8')
-from email.iterators import typed_subpart_iterator
 import logging
 import mailcap
 from cStringIO import StringIO
 
-import alot.crypto as crypto
-import alot.helper as helper
-from alot.errors import GPGProblem
-from alot.settings import settings
-from alot.helper import string_sanitize
-from alot.helper import string_decode
-from alot.helper import parse_mailcap_nametemplate
-from alot.helper import split_commandstring
+from .. import crypto
+from .. import helper
+from ..errors import GPGProblem
+from ..settings import settings
+from ..helper import string_sanitize
+from ..helper import string_decode
+from ..helper import parse_mailcap_nametemplate
+from ..helper import split_commandstring
+
+charset.add_charset('utf-8', charset.QP, charset.QP, 'utf-8')
 
 X_SIGNATURE_VALID_HEADER = 'X-Alot-OpenPGP-Signature-Valid'
 X_SIGNATURE_MESSAGE_HEADER = 'X-Alot-OpenPGP-Signature-Message'
@@ -41,9 +44,20 @@ def add_signature_headers(mail, sigs, error_msg):
         error_msg = error_msg or 'no signature found'
     else:
         try:
-            sig_from = crypto.get_key(sigs[0].fpr).uids[0].uid
+            key = crypto.get_key(sigs[0].fpr)
+            for uid in key.uids:
+                if crypto.check_uid_validity(key, uid.email):
+                    sig_from = uid.uid
+                    uid_trusted = True
+                    break
+            else:
+                # No trusted uid found, we did not break but drop from the
+                # for loop.
+                uid_trusted = False
+                sig_from = key.uids[0].uid
         except:
             sig_from = sigs[0].fpr
+            uid_trusted = False
 
     mail.add_header(
         X_SIGNATURE_VALID_HEADER,
@@ -53,11 +67,13 @@ def add_signature_headers(mail, sigs, error_msg):
         X_SIGNATURE_MESSAGE_HEADER,
         u'Invalid: {0}'.format(error_msg)
         if error_msg else
-        u'Valid: {0}'.format(sig_from),
+        u'Valid: {0}'.format(sig_from)
+        if uid_trusted else
+        u'Untrusted: {0}'.format(sig_from)
     )
 
 
-def get_params(mail, failobj=list(), header='content-type', unquote=True):
+def get_params(mail, failobj=None, header='content-type', unquote=True):
     '''Get Content-Type parameters as dict.
 
     RFC 2045 specifies that parameter names are case-insensitive, so
@@ -69,6 +85,7 @@ def get_params(mail, failobj=list(), header='content-type', unquote=True):
     :param unquote: unquote the values
     :returns: a `dict` containing the parameters
     '''
+    failobj = failobj or []
     return {k.lower(): v for k, v in mail.get_params(failobj, header, unquote)}
 
 
@@ -95,8 +112,8 @@ def message_from_file(handle):
 
     # handle OpenPGP signed data
     if (m.is_multipart() and
-        m.get_content_subtype() == 'signed' and
-            p.get('protocol', None) == app_pgp_sig):
+            m.get_content_subtype() == 'signed' and
+            p.get('protocol') == app_pgp_sig):
         # RFC 3156 is quite strict:
         # * exactly two messages
         # * the second is of type 'application/pgp-signature'
@@ -106,11 +123,11 @@ def message_from_file(handle):
         if len(m.get_payload()) != 2:
             malformed = u'expected exactly two messages, got {0}'.format(
                 len(m.get_payload()))
-
-        ct = m.get_payload(1).get_content_type()
-        if ct != app_pgp_sig:
-            malformed = u'expected Content-Type: {0}, got: {1}'.format(
-                app_pgp_sig, ct)
+        else:
+            ct = m.get_payload(1).get_content_type()
+            if ct != app_pgp_sig:
+                malformed = u'expected Content-Type: {0}, got: {1}'.format(
+                    app_pgp_sig, ct)
 
         # TODO: RFC 3156 says the alg has to be lower case, but I've
         # seen a message with 'PGP-'. maybe we should be more
@@ -132,7 +149,7 @@ def message_from_file(handle):
     # handle OpenPGP encrypted data
     elif (m.is_multipart() and
           m.get_content_subtype() == 'encrypted' and
-          p.get('protocol', None) == app_pgp_enc and
+          p.get('protocol') == app_pgp_enc and
           'Version: 1' in m.get_payload(0).get_payload()):
         # RFC 3156 is quite strict:
         # * exactly two messages
@@ -234,7 +251,7 @@ def extract_headers(mail, headers=None):
     """
     headertext = u''
     if headers is None:
-        headers = mail.keys()
+        headers = mail.iterkeys()
     for key in headers:
         value = u''
         if key in mail:
@@ -243,7 +260,7 @@ def extract_headers(mail, headers=None):
     return headertext
 
 
-def extract_body(mail, types=None):
+def extract_body(mail, types=None, field_key='copiousoutput'):
     """
     returns a body text string for given mail.
     If types is `None`, `text/*` is used:
@@ -287,8 +304,7 @@ def extract_body(mail, types=None):
             body_parts.append(string_sanitize(raw_payload))
         else:
             # get mime handler
-            key = 'copiousoutput'
-            handler, entry = settings.mailcap_find_match(ctype, key=key)
+            _, entry = settings.mailcap_find_match(ctype, key=field_key)
             tempfile_name = None
             stdin = None
 
@@ -300,28 +316,25 @@ def extract_body(mail, types=None):
                     # open tempfile, respect mailcaps nametemplate
                     nametemplate = entry.get('nametemplate', '%s')
                     prefix, suffix = parse_mailcap_nametemplate(nametemplate)
-                    tmpfile = tempfile.NamedTemporaryFile(delete=False,
-                                                          prefix=prefix,
-                                                          suffix=suffix)
-                    # write payload to tmpfile
-                    tmpfile.write(raw_payload)
-                    tmpfile.close()
-                    tempfile_name = tmpfile.name
+                    with tempfile.NamedTemporaryFile(
+                            delete=False, prefix=prefix, suffix=suffix) \
+                            as tmpfile:
+                        tmpfile.write(raw_payload)
+                        tempfile_name = tmpfile.name
                 else:
                     stdin = raw_payload
 
                 # read parameter, create handler command
-                parms = tuple(map('='.join, part.get_params()))
+                parms = tuple('='.join(p) for p in part.get_params())
 
                 # create and call external command
                 cmd = mailcap.subst(entry['view'], ctype,
                                     filename=tempfile_name, plist=parms)
-                logging.debug('command: %s' % cmd)
-                logging.debug('parms: %s' % str(parms))
+                logging.debug('command: %s', cmd)
+                logging.debug('parms: %s', str(parms))
                 cmdlist = split_commandstring(cmd)
                 # call handler
-                rendered_payload, errmsg, retval = helper.call_cmd(
-                    cmdlist, stdin=stdin)
+                rendered_payload, _, _ = helper.call_cmd(cmdlist, stdin=stdin)
 
                 # remove tempfile
                 if tempfile_name:
@@ -357,7 +370,10 @@ def decode_header(header, normalize=False):
 
     # some mailers send out incorrectly escaped headers
     # and double quote the escaped realname part again. remove those
-    value = re.sub(r'\"(.*?=\?.*?.*?)\"', r'\1', value)
+    # RFC: 2047
+    regex = r'"(=\?.+?\?.+?\?[^ ?]+\?=)"'
+    value = re.sub(regex, r'\1', value)
+    logging.debug("unquoted header: |%s|", value)
 
     # otherwise we interpret RFC2822 encoding escape sequences
     valuelist = email.header.decode_header(value)
@@ -385,7 +401,7 @@ def encode_header(key, value):
         rawentries = value.split(',')
         encodedentries = []
         for entry in rawentries:
-            m = re.search('\s*(.*)\s+<(.*\@.*\.\w*)>\s*$', entry)
+            m = re.search(r'\s*(.*)\s+<(.*\@.*\.\w*)>\s*$', entry)
             if m:  # If a realname part is contained
                 name, address = m.groups()
                 # try to encode as ascii, if that fails, revert to utf-8

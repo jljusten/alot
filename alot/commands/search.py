@@ -1,16 +1,18 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
+from __future__ import absolute_import
+
 import argparse
 import logging
 
-from alot.commands import Command, registerCommand
-from alot.commands.globals import PromptCommand
-from alot.commands.globals import MoveCommand
+from . import Command, registerCommand
+from .globals import PromptCommand
+from .globals import MoveCommand
+from .. import commands
 
-from alot.db.errors import DatabaseROError
-from alot import commands
-from alot import buffers
+from .. import buffers
+from ..db.errors import DatabaseROError
 
 
 MODE = 'search'
@@ -33,7 +35,7 @@ class OpenThreadCommand(Command):
             self.thread = ui.current_buffer.get_selected_thread()
         if self.thread:
             query = ui.current_buffer.querystring
-            logging.info('open thread view for %s' % self.thread)
+            logging.info('open thread view for %s', self.thread)
 
             sb = buffers.ThreadBuffer(ui, self.thread)
             ui.buffer_open(sb)
@@ -42,11 +44,11 @@ class OpenThreadCommand(Command):
 
 @registerCommand(MODE, 'refine', help='refine query', arguments=[
     (['--sort'], {'help': 'sort order', 'choices': [
-                  'oldest_first', 'newest_first', 'message_id', 'unsorted']}),
+        'oldest_first', 'newest_first', 'message_id', 'unsorted']}),
     (['query'], {'nargs': argparse.REMAINDER, 'help': 'search string'})])
 @registerCommand(MODE, 'sort', help='set sort order', arguments=[
     (['sort'], {'help': 'sort order', 'choices': [
-                'oldest_first', 'newest_first', 'message_id', 'unsorted']}),
+        'oldest_first', 'newest_first', 'message_id', 'unsorted']}),
 ])
 class RefineCommand(Command):
 
@@ -110,43 +112,50 @@ class RetagPromptCommand(Command):
         return ui.apply_command(PromptCommand('retag ' + initial_tagstring))
 
 
-@registerCommand(MODE, 'tag', forced={'action': 'add'}, arguments=[
-    (['--no-flush'], {'action': 'store_false', 'dest': 'flush',
-                      'default': 'True',
-                      'help': 'postpone a writeout to the index'}),
-    (['--all'], {'action': 'store_true', 'dest': 'allmessages', 'default':
-                 False, 'help': 'retag all messages in search result'}),
-    (['tags'], {'help': 'comma separated list of tags'})],
+@registerCommand(
+    MODE, 'tag', forced={'action': 'add'},
+    arguments=[
+        (['--no-flush'], {'action': 'store_false', 'dest': 'flush',
+                          'default': 'True',
+                          'help': 'postpone a writeout to the index'}),
+        (['--all'], {'action': 'store_true', 'dest': 'allmessages', 'default':
+                     False, 'help': 'retag all messages in search result'}),
+        (['tags'], {'help': 'comma separated list of tags'})],
     help='add tags to all messages in the thread that match the current query',
 )
-@registerCommand(MODE, 'retag', forced={'action': 'set'}, arguments=[
-    (['--no-flush'], {'action': 'store_false', 'dest': 'flush',
-                      'default': 'True',
-                      'help': 'postpone a writeout to the index'}),
-    (['--all'], {'action': 'store_true', 'dest': 'allmessages', 'default':
-                 False, 'help': 'retag all messages in search result'}),
-    (['tags'], {'help': 'comma separated list of tags'})],
+@registerCommand(
+    MODE, 'retag', forced={'action': 'set'},
+    arguments=[
+        (['--no-flush'], {'action': 'store_false', 'dest': 'flush',
+                          'default': 'True',
+                          'help': 'postpone a writeout to the index'}),
+        (['--all'], {'action': 'store_true', 'dest': 'allmessages', 'default':
+                     False, 'help': 'retag all messages in search result'}),
+        (['tags'], {'help': 'comma separated list of tags'})],
     help='set tags of all messages in the thread that match the current query',
 )
-@registerCommand(MODE, 'untag', forced={'action': 'remove'}, arguments=[
-    (['--no-flush'], {'action': 'store_false', 'dest': 'flush',
-                      'default': 'True',
-                      'help': 'postpone a writeout to the index'}),
-    (['--all'], {'action': 'store_true', 'dest': 'allmessages', 'default':
-                 False, 'help': 'retag all messages in search result'}),
-    (['tags'], {'help': 'comma separated list of tags'})],
+@registerCommand(
+    MODE, 'untag', forced={'action': 'remove'},
+    arguments=[
+        (['--no-flush'], {'action': 'store_false', 'dest': 'flush',
+                          'default': 'True',
+                          'help': 'postpone a writeout to the index'}),
+        (['--all'], {'action': 'store_true', 'dest': 'allmessages', 'default':
+                     False, 'help': 'retag all messages in search result'}),
+        (['tags'], {'help': 'comma separated list of tags'})],
     help='remove tags from all messages in the thread that match the query',
 )
-@registerCommand(MODE, 'toggletags', forced={'action': 'toggle'}, arguments=[
-    (['--no-flush'], {'action': 'store_false', 'dest': 'flush',
-                      'default': 'True',
-                      'help': 'postpone a writeout to the index'}),
-    (['tags'], {'help': 'comma separated list of tags'})],
-    help="""flip presence of tags on this thread.
-    A tag is considered present if at least one message contained in this
-    thread is tagged with it. In that case this command will remove the tag
-    from every message in the thread.
-    """)
+@registerCommand(
+    MODE, 'toggletags', forced={'action': 'toggle'},
+    arguments=[
+        (['--no-flush'], {'action': 'store_false', 'dest': 'flush',
+                          'default': 'True',
+                          'help': 'postpone a writeout to the index'}),
+        (['tags'], {'help': 'comma separated list of tags'})],
+    help='flip presence of tags on this thread. A tag is considered present '
+         'if at least one message contained in this thread is tagged with it. '
+         'In that case this command will remove the tag from every message in '
+         'the thread.')
 class TagCommand(Command):
 
     """manipulate message tags"""
@@ -185,13 +194,13 @@ class TagCommand(Command):
         if not self.allm:
             testquery = "(%s) AND thread:%s" % (testquery,
                                                 thread.get_thread_id())
-        logging.debug('all? %s' % self.allm)
-        logging.debug('q: %s' % testquery)
+        logging.debug('all? %s', self.allm)
+        logging.debug('q: %s', testquery)
 
         hitcount_before = ui.dbman.count_messages(testquery)
 
         def remove_thread():
-            logging.debug('remove thread from result list: %s' % thread)
+            logging.debug('remove thread from result list: %s', thread)
             if threadline_widget in searchbuffer.threadlist:
                 # remove this thread from result list
                 searchbuffer.threadlist.remove(threadline_widget)
@@ -212,7 +221,7 @@ class TagCommand(Command):
             searchbuffer.result_count += (hitcount_after - hitcount_before)
             ui.update()
 
-        tags = filter(lambda x: x, self.tagsstring.split(','))
+        tags = [x for x in self.tagsstring.split(',') if x]
 
         try:
             if self.action == 'add':
@@ -241,10 +250,9 @@ class TagCommand(Command):
             ui.apply_command(commands.globals.FlushCommand(callback=refresh))
 
 
-@registerCommand(MODE, 'move', help='move focus in search buffer',
-                 arguments=[(['movement'], {
-                             'nargs': argparse.REMAINDER,
-                             'help': 'last'})])
+@registerCommand(
+    MODE, 'move', help='move focus in search buffer',
+    arguments=[(['movement'], {'nargs': argparse.REMAINDER, 'help': 'last'})])
 class MoveFocusCommand(MoveCommand):
 
     def apply(self, ui):

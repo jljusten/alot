@@ -1,20 +1,25 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
+from __future__ import absolute_import
+
 import email
-from datetime import datetime
 import email.charset as charset
-charset.add_charset('utf-8', charset.QP, charset.QP, 'utf-8')
+import functools
+from datetime import datetime
+
 from notmuch import NullPointerError
 
-import alot.helper as helper
-from alot.settings import settings
-
 from .utils import extract_headers, extract_body, message_from_file
-from alot.db.utils import decode_header
+from .utils import decode_header
 from .attachment import Attachment
+from .. import helper
+from ..settings import settings
+
+charset.add_charset('utf-8', charset.QP, charset.QP, 'utf-8')
 
 
+@functools.total_ordering
 class Message(object):
 
     """
@@ -35,13 +40,15 @@ class Message(object):
         self._id = msg.get_message_id()
         self._thread_id = msg.get_thread_id()
         self._thread = thread
-        casts_date = lambda: datetime.fromtimestamp(msg.get_date())
-        self._datetime = helper.safely_get(casts_date,
-                                           ValueError, None)
+        try:
+            self._datetime = datetime.fromtimestamp(msg.get_date())
+        except ValueError:
+            self._datetime = None
         self._filename = msg.get_filename()
-        author = helper.safely_get(lambda: msg.get_header('From'),
-                                   NullPointerError)
-        self._from = decode_header(author)
+        try:
+            self._from = decode_header(msg.get_header('From'))
+        except NullPointerError:
+            self._from = ''
         self._email = None  # will be read upon first use
         self._attachments = None  # will be read upon first use
         self._tags = set(msg.get_tags())
@@ -57,10 +64,20 @@ class Message(object):
         """needed for sets of Messages"""
         return hash(self._id)
 
-    def __cmp__(self, other):
-        """needed for Message comparison"""
-        res = cmp(self.get_message_id(), other.get_message_id())
-        return res
+    def __eq__(self, other):
+        if isinstance(other, type(self)):
+            return self.get_message_id() == other.get_message_id()
+        return NotImplemented
+
+    def __ne__(self, other):
+        if isinstance(other, type(self)):
+            return self.get_message_id() != other.get_message_id()
+        return NotImplemented
+
+    def __lt__(self, other):
+        if isinstance(other, type(self)):
+            return self.get_message_id() < other.get_message_id()
+        return NotImplemented
 
     def get_email(self):
         """returns :class:`email.Message` for this message"""
@@ -69,9 +86,8 @@ class Message(object):
                   "Message file is no longer accessible:\n%s" % path
         if not self._email:
             try:
-                f_mail = open(path)
-                self._email = message_from_file(f_mail)
-                f_mail.close()
+                with open(path) as f:
+                    self._email = message_from_file(f)
             except IOError:
                 self._email = email.message_from_string(warning)
         return self._email
@@ -93,13 +109,10 @@ class Message(object):
         return self._thread_id
 
     def get_message_parts(self):
-        """returns a list of all body parts of this message"""
-        # TODO really needed? email  iterators can do this
-        out = []
+        """yield all body parts of this message"""
         for msg in self.get_email().walk():
             if not msg.is_multipart():
-                out.append(msg)
-        return out
+                yield msg
 
     def get_tags(self):
         """returns tags attached to this message as list of strings"""
@@ -114,7 +127,7 @@ class Message(object):
 
     def has_replies(self):
         """returns true if this message has at least one reply"""
-        return (len(self.get_replies()) > 0)
+        return len(self.get_replies()) > 0
 
     def get_replies(self):
         """returns replies to this message as list of :class:`Message`"""
@@ -230,12 +243,13 @@ class Message(object):
                     content = part.get_payload(decode=True)
                     ct = helper.guess_mimetype(content)
 
-                if cd.startswith('attachment'):
-                    if ct not in ['application/pgp-encrypted',
-                                  'application/pgp-signature']:
+                if cd.lower().startswith('attachment'):
+                    if ct.lower() not in ['application/pgp-encrypted',
+                                          'application/pgp-signature']:
                         self._attachments.append(Attachment(part))
-                elif cd.startswith('inline'):
-                    if filename is not None and ct != 'application/pgp':
+                elif cd.lower().startswith('inline'):
+                    if (filename is not None and
+                            ct.lower() != 'application/pgp'):
                         self._attachments.append(Attachment(part))
         return self._attachments
 

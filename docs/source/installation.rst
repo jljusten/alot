@@ -7,20 +7,30 @@ Alot depends on recent versions of notmuch and urwid. Note that due to restricti
 on argparse and subprocess, you need to run *`3.0` > python ≥ `2.7`* (see :ref:`faq <faq_7>`).
 A full list of dependencies is below:
 
-* `libmagic and python bindings <http://darwinsys.com/file/>`_, ≥ `5.04`:
-* `configobj <http://www.voidspace.org.uk/python/configobj.html>`_, ≥ `4.6.0`:
+* `libmagic and python bindings <http://darwinsys.com/file/>`_, ≥ `5.04`
+* `configobj <http://www.voidspace.org.uk/python/configobj.html>`_, ≥ `4.7.0`
 * `twisted <http://twistedmatrix.com/trac/>`_, ≥ `10.2.0`:
-* `libnotmuch <http://notmuchmail.org/>`_ and it's python bindings, ≥ `0.12`.
+* `libnotmuch <http://notmuchmail.org/>`_ and it's python bindings, ≥ `0.13`
 * `urwid <http://excess.org/urwid/>`_ toolkit, ≥ `1.1.0`
+* `urwidtrees <https://github.com/pazz/urwidtrees>`_, ≥ `1.0`
 * `PyGPGME <https://launchpad.net/pygpgme>`_ ≥ `0.2`
 
-On debian/ubuntu these are packaged as::
+.. note:: urwidtrees was only recently detached from alot and is not widely
+          available as a separate package. You can install it e.g., via
+          `pip <https://pypi.python.org/pypi/pip>`_ directly from github:
 
-  python-magic python-configobj python-twisted python-notmuch python-urwid python-gpgme
+          .. code-block:: sh
+
+            pip install --user https://github.com/pazz/urwidtrees/archive/master.zip
+
+
+On debian/ubuntu the rest are packaged as::
+
+  python-setuptools python-magic python-configobj python-twisted python-notmuch python-urwid python-gpgme
 
 On fedora/redhat these are packaged as::
 
-  python-magic python-configobj python-twisted python-notmuch python-urwid pygpgme
+  python-setuptools python-magic python-configobj python-twisted python-notmuch python-urwid pygpgme
 
 Alot uses `mailcap <http://en.wikipedia.org/wiki/Mailcap>`_ to look up mime-handler for inline
 rendering and opening of attachments.  For a full description of the maicap protocol consider the
@@ -32,17 +42,16 @@ renderer (copiousoutput) set up for `text/html`, i.e. have something like this i
 
 .. rubric:: get and install alot
 
-Grab a `tarball here <https://github.com/pazz/alot/tags>`_ or
-directly check out a more recent version from `github <https://github.com/pazz/alot>`_.::
+You can use `pip` to install directly from GitHub::
 
-  git clone git@github.com:pazz/alot.git
+  $ pip install --user https://github.com/pazz/alot/archive/master.zip
 
-Run the :file:`setup.py` with the :option:`--user` flag to install locally::
+Don't have pip installed? Just download and extract, then run::
 
   python setup.py install --user
 
-and make sure :file:`~/.local/bin` is in your :envvar:`PATH`.
-For system-wide installation omit this falg and call with the respective permissions.
+Make sure :file:`~/.local/bin` is in your :envvar:`PATH`. For system-wide
+installation omit the `--user` flag and call with the respective permissions.
 
 .. rubric:: generate manual and manpage
 

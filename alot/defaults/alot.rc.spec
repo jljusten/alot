@@ -35,6 +35,9 @@ themes_dir = string(default=None)
 # name of the theme to use
 theme = string(default=None)
 
+# enable mouse support - mouse tracking will be handled by urwid
+handle_mouse = boolean(default=False)
+
 # headers that get displayed by default
 displayed_headers = force_list(default=list(From,To,Cc,Bcc,Subject))
 
@@ -48,6 +51,19 @@ thread_authors_replace_me = boolean(default=True)
 # Word to replace own addresses with. Works in combination with
 # :ref:`thread_authors_replace_me <thread-authors-replace-me>`
 thread_authors_me = string(default='Me')
+
+# What should be considered to be "the thread subject".
+# Valid values are:
+#
+# * 'notmuch' (the default), will use the thread subject from notmuch, which
+#   depends on the selected sorting method
+# * 'oldest' will always use the subject of the oldest message in the thread as
+#   the thread subject
+thread_subject = option('oldest', 'notmuch', default='notmuch')
+
+# When constructing the unique list of thread authors, order by date of
+# author's first or latest message in thread
+thread_authors_order_by = option('first_message', 'latest_message', default='first_message')
 
 # set terminal command used for spawning shell commands
 terminal_cmd = string(default='x-terminal-emulator -e')
@@ -76,7 +92,8 @@ edit_headers_whitelist = force_list(default=list(*,))
 # see :ref:`edit_headers_whitelist <edit-headers-whitelist>`
 edit_headers_blacklist = force_list(default=list(Content-Type,MIME-Version,References,In-Reply-To))
 
-# timeout in seconds after a failed attempt to writeout the database is repeated
+# timeout in seconds after a failed attempt to writeout the database is
+# repeated. Set to 0 for no retry.
 flush_retry_timeout = integer(default=5)
 
 # where to look up hooks
@@ -209,10 +226,32 @@ followup_to = boolean(default=False)
 # The list of addresses associated to the mailinglists you are subscribed to
 mailinglists = force_list(default=list())
 
+# Automatically switch to list reply mode if appropriate
+auto_replyto_mailinglist = boolean(default=False)
+
 # prefer plaintext alternatives over html content in multipart/alternative
 prefer_plaintext = boolean(default=False)
 
-# Key bindings 
+# In a thread buffer, hide from messages summaries tags that are commom to all
+# messages in that thread.
+msg_summary_hides_threadwide_tags = boolean(default=True)
+
+# The list of headers to match to determine sending account for a reply.
+# Headers are searched in the order in which they are specified here, and the first header
+# containing a match is used. If multiple accounts match in that header, the one defined
+# first in the account block is used.
+reply_account_header_priority = force_list(default=list(From,To,Cc,Envelope-To,X-Envelope-To,Delivered-To))
+
+# The number of command line history entries to save
+#
+# .. note:: You can set this to -1 to save *all* entries to disk but the
+#           history file might get *very* long.
+history_size = integer(default=50)
+
+# The number of seconds to wait between calls to the loop_hook
+periodic_hook_frequency = integer(default=300)
+
+# Key bindings
 [bindings]
     __many__ = string(default=None)
     [[___many___]]
@@ -242,6 +281,9 @@ prefer_plaintext = boolean(default=False)
 
         # used to clear your addresses/ match account when formatting replies
         aliases = force_list(default=list())
+
+        # a regex for catching further aliases (like + extensions).
+        alias_regexp = string(default=None)
 
         # sendmail command. This is the shell command used to send out mails via the sendmail protocol
         sendmail_command = string(default='sendmail -t')
@@ -279,6 +321,25 @@ prefer_plaintext = boolean(default=False)
         # Outgoing messages will be GPG signed by default if this is set to True.
         sign_by_default = boolean(default=False)
 
+	# Alot will try to GPG encrypt outgoing messages by default when this
+	# is set to `all` or `trusted`.  If set to `all` the message will be
+	# encrypted for all recipients for who a key is available in the key
+	# ring.  If set to `trusted` it will be encrypted to all
+	# recipients if a trusted key is available for all recipients (one
+	# where the user id for the key is signed with a trusted signature).
+	#
+	# .. note:: If the message will not be encrypted by default you can
+	#           still use the :ref:`toggleencrypt
+	#           <cmd.envelope.toggleencrypt>`, :ref:`encrypt
+	#           <cmd.envelope.encrypt>` and :ref:`unencrypt
+	#           <cmd.envelope.unencrypt>` commands to encrypt it.
+	# .. note:: The values `True` and `False` are interpreted as `all` and
+	#           `none` respectively.  They are kept for backwards
+	#           compatibility to give users a change to migrate to the new
+	#           option type.  They might become deprecated in future
+	#           versions.
+        encrypt_by_default = option('all', 'none', 'trusted', 'True', 'False', 'true', 'false', 'Yes', 'No', 'yes', 'no', '1', '0', default='none')
+
         # The GPG key ID you want to use with this account. If unset, alot will
         # use your default key.
         gpg_key = gpg_key_hint(default=None)
@@ -301,3 +362,10 @@ prefer_plaintext = boolean(default=False)
 
             # contacts file used for type 'abook' address book
             abook_contacts_file = string(default='~/.abook/addressbook')
+
+            # (shellcommand addressbooks)
+            # let the external command do the filtering when looking up addresses.
+            # If set to True, the command is fired with the given search string
+            # as parameter. Otherwise, the command is fired without additional parameters
+            # and the result list is filtered according to the search string.
+            shellcommand_external_filtering = boolean(default=True)

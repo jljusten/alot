@@ -2,28 +2,31 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
+from __future__ import absolute_import
+
 from datetime import timedelta
 from datetime import datetime
 from collections import deque
-import subprocess
-import shlex
-import email
+from cStringIO import StringIO
+import logging
 import mimetypes
 import os
 import re
+import shlex
+import subprocess
+import email
 from email.generator import Generator
 from email.mime.audio import MIMEAudio
 from email.mime.base import MIMEBase
 from email.mime.image import MIMEImage
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
 import urwid
 import magic
 from twisted.internet import reactor
 from twisted.internet.protocol import ProcessProtocol
 from twisted.internet.defer import Deferred
-from cStringIO import StringIO
-import logging
 
 
 def split_commandline(s, comments=False, posix=True):
@@ -54,24 +57,6 @@ def split_commandstring(cmdstring):
     if isinstance(cmdstring, unicode):
         cmdstring = cmdstring.encode('utf-8', errors='ignore')
     return shlex.split(cmdstring)
-
-
-def safely_get(clb, E, on_error=''):
-    """
-    returns result of :func:`clb` and falls back to `on_error`
-    in case exception `E` is raised.
-
-    :param clb: function to evaluate
-    :type clb: callable
-    :param E: exception to catch
-    :type E: Exception
-    :param on_error: default string returned when exception is caught
-    :type on_error: str
-    """
-    try:
-        return clb()
-    except E:
-        return on_error
 
 
 def string_sanitize(string, tab_width=8):
@@ -132,7 +117,7 @@ def string_decode(string, enc='ascii'):
 
 def shorten(string, maxlen):
     """shortens string if longer than maxlen, appending ellipsis"""
-    if maxlen > 1 and len(string) > maxlen:
+    if 1 < maxlen < len(string):
         string = string[:maxlen - 1] + u'\u2026'
     return string[:maxlen]
 
@@ -157,20 +142,6 @@ def shorten_author_string(authors_string, maxlength):
 
       - If it is finally necessary to hide any author, an ellipsis
         between first and next authors is added.
-
-    >>> authors = u'King Kong, Mucho Muchacho, Jaime Huerta, Flash Gordon'
-    >>> print shorten_author_string(authors, 60)
-    King Kong, Mucho Muchacho, Jaime Huerta, Flash Gordon
-    >>> print shorten_author_string(authors, 40)
-    King, Mucho, Jaime, Flash
-    >>> print shorten_author_string(authors, 20)
-    King, …, Jai…, Flash
-    >>> print shorten_author_string(authors, 10)
-    King, …
-    >>> print shorten_author_string(authors, 2)
-    K…
-    >>> print shorten_author_string(authors, 1)
-    K
     """
 
     # I will create a list of authors by parsing author_string. I use
@@ -252,7 +223,7 @@ def pretty_datetime(d):
     >>> pretty_datetime(now - timedelta(days=356))
     u'Apr 2011'
     """
-    ampm = d.strftime('%P')
+    ampm = d.strftime('%p').lower()
     if len(ampm):
         hourfmt = '%I' + ampm
         hourminfmt = '%I:%M' + ampm
@@ -359,8 +330,8 @@ def call_cmd_async(cmdlist, stdin=None, env=None):
     environment = os.environ
     if env is not None:
         environment.update(env)
-    logging.debug('ENV = %s' % environment)
-    logging.debug('CMD = %s' % cmdlist)
+    logging.debug('ENV = %s', environment)
+    logging.debug('CMD = %s', cmdlist)
     proc = reactor.spawnProcess(_EverythingGetter(d), executable=cmdlist[0],
                                 env=environment,
                                 args=cmdlist)
@@ -397,7 +368,8 @@ def guess_mimetype(blob):
         m.load()
         magictype = m.buffer(blob)
     elif hasattr(magic, 'from_buffer'):
-        magictype = magic.from_buffer(blob, mime=True)
+        # cf. issue #841
+        magictype = magic.from_buffer(blob, mime=True) or magictype
     else:
         raise Exception('Unknown magic API')
 
@@ -458,12 +430,27 @@ def libmagic_version_at_least(version):
         # if it's not present, we can't guess right, so let's assume False
         return False
 
-    return (magic_wrapper.magic_version >= version)
+    return magic_wrapper.magic_version >= version
 
 
 # TODO: make this work on blobs, not paths
 def mimewrap(path, filename=None, ctype=None):
-    content = open(path, 'rb').read()
+    """Take the contents of the given path and wrap them into an email MIME
+    part according to the content type.  The content type is auto detected from
+    the actual file contents and the file name if it is not given.
+
+    :param path: the path to the file contents
+    :type path: str
+    :param filename: the file name to use in the generated MIME part
+    :type filename: str or None
+    :param ctype: the content type of the file contents in path
+    :type ctype: str or None
+    :returns: the message MIME part storing the data from path
+    :rtype: subclasses of email.mime.base.MIMEBase
+    """
+
+    with open(path, 'rb') as f:
+        content = f.read()
     if not ctype:
         ctype = guess_mimetype(content)
         # libmagic < 5.12 incorrectly detects excel/powerpoint files as
@@ -472,7 +459,7 @@ def mimewrap(path, filename=None, ctype=None):
         # as distributions still ship libmagic 5.11.
         if (ctype == 'application/msword' and
                 not libmagic_version_at_least(513)):
-            mimetype, encoding = mimetypes.guess_type(path)
+            mimetype, _ = mimetypes.guess_type(path)
             if mimetype:
                 ctype = mimetype
 
@@ -499,12 +486,15 @@ def mimewrap(path, filename=None, ctype=None):
 
 
 def shell_quote(text):
-    r'''
-    >>> print(shell_quote("hello"))
-    'hello'
-    >>> print(shell_quote("hello'there"))
-    'hello'"'"'there'
-    '''
+    """Escape the given text for passing it to the shell for interpretation.
+    The resulting string will be parsed into one "word" (in the sense used in
+    the shell documentation, see sh(1)) by the shell.
+
+    :param text: the text to quote
+    :type text: str
+    :returns: the quoted text
+    :rtype: str
+    """
     return "'%s'" % text.replace("'", """'"'"'""")
 
 
@@ -520,18 +510,15 @@ def tag_cmp(a, b):
 
 
 def humanize_size(size):
-    r'''
-    >>> humanize_size(1)
-    '1'
-    >>> humanize_size(123)
-    '123'
-    >>> humanize_size(1234)
-    '1K'
-    >>> humanize_size(1234 * 1024)
-    '1.2M'
-    >>> humanize_size(1234 * 1024 * 1024)
-    '1234.0M'
-    '''
+    """Create a nice human readable representation of the given number
+    (understood as bytes) using the "K" and "M" suffixes to indicate kilo- and
+    megabytes.  They are understood to be 1024 based.
+
+    :param size: the number to convert
+    :type size: int
+    :returns: the human readable representation of size
+    :rtype: str
+    """
     for factor, format_string in ((1, '%i'),
                                   (1024, '%iK'),
                                   (1024 * 1024, '%.1fM')):
@@ -559,9 +546,10 @@ def parse_mailto(mailto_str):
     Interpret mailto-string
 
     :param mailto_str: the string to interpret. Must conform to :rfc:2368.
-    :return: pair headers,body. headers is a dict mapping str to lists of
-        (str, body) is a str.
-    :rtype: (dict(str-->[str,..], str)
+    :type mailto_str: str
+    :return: the header fields and the body found in the mailto link as a tuple
+        of length two
+    :rtype: tuple(dict(str->list(str)), str)
     """
     if mailto_str.startswith('mailto:'):
         import urllib
@@ -576,7 +564,7 @@ def parse_mailto(mailto_str):
         for s in parms_str.split('&'):
             key, value = s.partition('=')[::2]
             key = key.capitalize()
-            if key is 'body':
+            if key == 'Body':
                 body = urllib.unquote(value)
             elif value:
                 headers[key] = [urllib.unquote(value)]
@@ -639,7 +627,7 @@ def email_as_string(mail):
         # clients can verify the signature when sending an email which contains
         # attachments.
         as_string = re.sub(r'--(\r\n)--' + boundary,
-                           '--\g<1>\g<1>--' + boundary,
+                           r'--\g<1>\g<1>--' + boundary,
                            as_string, flags=re.MULTILINE)
 
     return as_string

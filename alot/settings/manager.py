@@ -1,6 +1,8 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
+from __future__ import absolute_import
+
 import imp
 import os
 import re
@@ -8,19 +10,16 @@ import mailcap
 import logging
 from configobj import ConfigObj, Section
 
-from alot.account import SendmailAccount
-from alot.addressbooks import MatchSdtoutAddressbook, AbookAddressBook
-from alot.helper import pretty_datetime, string_decode
+from ..account import SendmailAccount
+from ..addressbook.abook import AbookAddressBook
+from ..addressbook.external import ExternalAddressbook
+from ..helper import pretty_datetime, string_decode
+from ..utils import configobj as checks
 
-from errors import ConfigError
-from utils import read_config
-from utils import resolve_att
-from checks import force_list
-from checks import mail_container
-from checks import gpg_key
-from checks import attr_triple
-from checks import align_mode
-from theme import Theme
+from .errors import ConfigError
+from .utils import read_config
+from .utils import resolve_att
+from .theme import Theme
 
 
 DEFAULTSPATH = os.path.join(os.path.dirname(__file__), '..', 'defaults')
@@ -57,19 +56,20 @@ class SettingsManager(object):
     def read_config(self, path):
         """parse alot's config file from path"""
         spec = os.path.join(DEFAULTSPATH, 'alot.rc.spec')
-        newconfig = read_config(path, spec,
-                                checks={'mail_container': mail_container,
-                                        'force_list': force_list,
-                                        'align': align_mode,
-                                        'attrtriple': attr_triple,
-                                        'gpg_key_hint': gpg_key})
+        newconfig = read_config(
+            path, spec, checks={
+                'mail_container': checks.mail_container,
+                'force_list': checks.force_list,
+                'align': checks.align_mode,
+                'attrtriple': checks.attr_triple,
+                'gpg_key_hint': checks.gpg_key})
         self._config.merge(newconfig)
 
         hooks_path = os.path.expanduser(self._config.get('hooksfile'))
         try:
             self.hooks = imp.load_source('hooks', hooks_path)
         except:
-            logging.debug('unable to load hooks file:%s' % hooks_path)
+            logging.debug('unable to load hooks file:%s', hooks_path)
         if 'bindings' in newconfig:
             newbindings = newconfig['bindings']
             if isinstance(newbindings, Section):
@@ -106,7 +106,8 @@ class SettingsManager(object):
         self._accounts = self._parse_accounts(self._config)
         self._accountmap = self._account_table(self._accounts)
 
-    def _parse_accounts(self, config):
+    @staticmethod
+    def _parse_accounts(config):
         """
         read accounts information from config
 
@@ -118,17 +119,18 @@ class SettingsManager(object):
         if 'accounts' in config:
             for acc in config['accounts'].sections:
                 accsec = config['accounts'][acc]
-                args = dict(config['accounts'][acc])
+                args = dict(config['accounts'][acc].items())
 
                 # create abook for this account
                 abook = accsec['abook']
-                logging.debug('abook defined: %s' % abook)
+                logging.debug('abook defined: %s', abook)
                 if abook['type'] == 'shellcommand':
                     cmd = abook['command']
                     regexp = abook['regexp']
                     if cmd is not None and regexp is not None:
-                        args['abook'] = MatchSdtoutAddressbook(cmd,
-                                                               match=regexp)
+                        ef = abook['shellcommand_external_filtering']
+                        args['abook'] = ExternalAddressbook(
+                            cmd, regexp, external_filtering=ef)
                     else:
                         msg = 'underspecified abook of type \'shellcommand\':'
                         msg += '\ncommand: %s\nregexp:%s' % (cmd, regexp)
@@ -138,15 +140,16 @@ class SettingsManager(object):
                     args['abook'] = AbookAddressBook(
                         contacts_path, ignorecase=abook['ignorecase'])
                 else:
-                    del(args['abook'])
+                    del args['abook']
 
                 cmd = args['sendmail_command']
-                del(args['sendmail_command'])
+                del args['sendmail_command']
                 newacc = SendmailAccount(cmd, **args)
                 accounts.append(newacc)
         return accounts
 
-    def _account_table(self, accounts):
+    @staticmethod
+    def _account_table(accounts):
         """
         creates a lookup table (emailaddress -> account) for a given list of
         accounts
@@ -186,7 +189,7 @@ class SettingsManager(object):
         """
         setter for global config values
 
-        :param key: config option identifise
+        :param key: config option identifies
         :type key: str
         :param value: option to set
         :type value: depends on the specfile :file:`alot.rc.spec`
@@ -305,8 +308,7 @@ class SettingsManager(object):
     def get_hook(self, key):
         """return hook (`callable`) identified by `key`"""
         if self.hooks:
-            if key in self.hooks.__dict__:
-                return self.hooks.__dict__[key]
+            return getattr(self.hooks, key, None)
         return None
 
     def get_mapped_input_keysequences(self, mode='global', prefix=u''):
@@ -314,8 +316,8 @@ class SettingsManager(object):
         globalmaps, modemaps = self.get_keybindings(mode)
         candidates = globalmaps.keys() + modemaps.keys()
         if prefix is not None:
-            prefixs = prefix + ' '
-            cand = filter(lambda x: x.startswith(prefixs), candidates)
+            prefixes = prefix + ' '
+            cand = [c for c in candidates if c.startswith(prefixes)]
             if prefix in candidates:
                 candidates = cand + [prefix]
             else:
@@ -350,8 +352,9 @@ class SettingsManager(object):
                 if value and value != '':
                     globalmaps[key] = value
         # get rid of empty commands left in mode bindings
-        for key in [k for k, v in modemaps.items() if not v or v == '']:
-            del modemaps[key]
+        for k, v in modemaps.items():
+            if not v:
+                del modemaps[k]
 
         return globalmaps, modemaps
 
@@ -401,7 +404,7 @@ class SettingsManager(object):
         """
 
         for myad in self.get_addresses():
-            if myad in address:
+            if myad == address:
                 return self._accountmap[myad]
         return None
 
@@ -413,8 +416,9 @@ class SettingsManager(object):
         """returns addresses of known accounts including all their aliases"""
         return self._accountmap.keys()
 
-    def get_addressbooks(self, order=[], append_remaining=True):
+    def get_addressbooks(self, order=None, append_remaining=True):
         """returns list of all defined :class:`AddressBook` objects"""
+        order = order or []
         abooks = []
         for a in order:
             if a:

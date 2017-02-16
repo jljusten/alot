@@ -1,15 +1,16 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
-import os
-import re
+from __future__ import absolute_import
+
+import argparse
 import glob
 import logging
-import argparse
+import os
+import re
 
-from alot.settings import settings
-import alot.helper
-from alot.helper import split_commandstring
+from ..settings import settings
+from ..helper import split_commandstring, string_decode
 
 
 class Command(object):
@@ -54,10 +55,6 @@ def lookup_command(cmdname, mode):
     :type mode: str
     :rtype: (:class:`Command`, :class:`~argparse.ArgumentParser`,
             dict(str->dict))
-
-    >>> (cmd, parser, kwargs) = lookup_command('save', 'thread')
-    >>> cmd
-    <class 'alot.commands.thread.SaveAttachmentCommand'>
     """
     if cmdname in COMMANDS[mode]:
         return COMMANDS[mode][cmdname]
@@ -113,7 +110,7 @@ class registerCommand(object):
 
     """
     def __init__(self, mode, name, help=None, usage=None,
-                 forced={}, arguments=[]):
+                 forced=None, arguments=None):
         """
         :param mode: mode identifier
         :type mode: str
@@ -134,8 +131,8 @@ class registerCommand(object):
         self.name = name
         self.help = help
         self.usage = usage
-        self.forced = forced
-        self.arguments = arguments
+        self.forced = forced or {}
+        self.arguments = arguments or []
 
     def __call__(self, klass):
         helpstring = self.help or klass.__doc__
@@ -156,19 +153,11 @@ def commandfactory(cmdline, mode='global'):
     :type cmdline: str
     :param mode: mode identifier
     :type mode: str
-
-    >>> cmd = alot.commands.commandfactory('save --all /foo', mode='thread')
-    >>> cmd
-    <alot.commands.thread.SaveAttachmentCommand object at 0x272cf10
-    >>> cmd.all
-    True
-    >>> cmd.path
-    u'/foo'
     """
     # split commandname and parameters
     if not cmdline:
         return None
-    logging.debug('mode:%s got commandline "%s"' % (mode, cmdline))
+    logging.debug('mode:%s got commandline "%s"', mode, cmdline)
     # allow to shellescape without a space after '!'
     if cmdline.startswith('!'):
         cmdline = 'shellescape \'%s\'' % cmdline[1:]
@@ -177,8 +166,8 @@ def commandfactory(cmdline, mode='global'):
         args = split_commandstring(cmdline)
     except ValueError as e:
         raise CommandParseError(e.message)
-    args = map(lambda x: alot.helper.string_decode(x, 'utf-8'), args)
-    logging.debug('ARGS: %s' % args)
+    args = [string_decode(x, 'utf-8') for x in args]
+    logging.debug('ARGS: %s', args)
     cmdname = args[0]
     args = args[1:]
 
@@ -195,7 +184,7 @@ def commandfactory(cmdline, mode='global'):
     parms = vars(parser.parse_args(args))
     parms.update(forcedparms)
 
-    logging.debug('cmd parms %s' % parms)
+    logging.debug('cmd parms %s', parms)
 
     # create Command
     cmd = cmdclass(**parms)

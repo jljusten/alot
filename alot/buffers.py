@@ -1,24 +1,26 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
-import urwid
-import os
-from notmuch import NotmuchError
+from __future__ import absolute_import
+
 import logging
+import os
 
-from settings import settings
-import commands
-from walker import PipeWalker
-from helper import shorten_author_string
-from db.errors import NonexistantObjectError
+import urwid
+from urwidtrees import ArrowTree, TreeBox, NestedTree
+from notmuch import NotmuchError
 
-from alot.widgets.globals import TagWidget
-from alot.widgets.globals import HeadersList
-from alot.widgets.globals import AttachmentWidget
-from alot.widgets.bufferlist import BufferlineWidget
-from alot.widgets.search import ThreadlineWidget
-from alot.widgets.thread import ThreadTree
-from alot.foreign.urwidtrees import ArrowTree, TreeBox, NestedTree
+from .settings import settings
+from . import commands
+from .walker import PipeWalker
+from .helper import shorten_author_string
+from .db.errors import NonexistantObjectError
+from .widgets.globals import TagWidget
+from .widgets.globals import HeadersList
+from .widgets.globals import AttachmentWidget
+from .widgets.bufferlist import BufferlineWidget
+from .widgets.search import ThreadlineWidget
+from .widgets.thread import ThreadTree
 
 
 class Buffer(object):
@@ -63,7 +65,7 @@ class BufferlistBuffer(Buffer):
 
     modename = 'bufferlist'
 
-    def __init__(self, ui, filtfun=None):
+    def __init__(self, ui, filtfun=lambda x: x):
         self.filtfun = filtfun
         self.ui = ui
         self.isinitialized = False
@@ -85,7 +87,7 @@ class BufferlistBuffer(Buffer):
             self.isinitialized = True
 
         lines = list()
-        displayedbuffers = filter(self.filtfun, self.ui.buffers)
+        displayedbuffers = [b for b in self.ui.buffers if self.filtfun(b)]
         for (num, b) in enumerate(displayedbuffers):
             line = BufferlineWidget(b)
             if (num % 2) == 0:
@@ -106,11 +108,12 @@ class BufferlistBuffer(Buffer):
 
     def get_selected_buffer(self):
         """returns currently selected :class:`Buffer` element from list"""
-        (linewidget, pos) = self.bufferlist.get_focus()
+        linewidget, _ = self.bufferlist.get_focus()
         bufferlinewidget = linewidget.get_focus().original_widget
         return bufferlinewidget.get_buffer()
 
     def focus_first(self):
+        """Focus the first line in the buffer list."""
         self.body.set_focus(0)
 
 
@@ -144,7 +147,7 @@ class EnvelopeBuffer(Buffer):
         hidden = settings.get('envelope_headers_blacklist')
         # build lines
         lines = []
-        for (k, vlist) in self.envelope.headers.items():
+        for (k, vlist) in self.envelope.headers.iteritems():
             if (k not in hidden) or self.all_headers:
                 for value in vlist:
                     lines.append((k, value))
@@ -225,13 +228,13 @@ class SearchBuffer(Buffer):
     def __str__(self):
         formatstring = '[search] for "%s" (%d message%s)'
         return formatstring % (self.querystring, self.result_count,
-                               's' * (not (self.result_count == 1)))
+                               's' if self.result_count > 1 else '')
 
     def get_info(self):
         info = {}
         info['querystring'] = self.querystring
         info['result_count'] = self.result_count
-        info['result_count_positive'] = 's' * (not (self.result_count == 1))
+        info['result_count_positive'] = 's' if self.result_count > 1 else ''
         return info
 
     def cleanup(self):
@@ -279,7 +282,7 @@ class SearchBuffer(Buffer):
         returns curently focussed :class:`alot.widgets.ThreadlineWidget`
         from the result list.
         """
-        (threadlinewidget, size) = self.threadlist.get_focus()
+        threadlinewidget, _ = self.threadlist.get_focus()
         return threadlinewidget
 
     def get_selected_thread(self):
@@ -303,8 +306,7 @@ class SearchBuffer(Buffer):
     def focus_last(self):
         if self.reversed:
             self.body.set_focus(0)
-        elif (self.result_count < 200) or \
-                (self.sort_order not in self._REVERSE.keys()):
+        elif self.result_count < 200 or self.sort_order not in self._REVERSE:
             self.consume_pipe()
             num_lines = len(self.threadlist.get_lines())
             self.body.set_focus(num_lines - 1)
@@ -363,12 +365,12 @@ class ThreadBuffer(Buffer):
 
         bars_att = settings.get_theming_attribute('thread', 'arrow_bars')
         heads_att = settings.get_theming_attribute('thread', 'arrow_heads')
-        A = ArrowTree(self._tree,
-                      indent=2,
-                      childbar_offset=0,
-                      arrow_tip_att=heads_att,
-                      arrow_att=bars_att,
-                      )
+        A = ArrowTree(
+            self._tree,
+            indent=2,
+            childbar_offset=0,
+            arrow_tip_att=heads_att,
+            arrow_att=bars_att)
         self._nested_tree = NestedTree(A, interpret_covered=True)
         self.body = TreeBox(self._nested_tree)
         self.message_count = self.thread.get_total_messages()
@@ -442,10 +444,12 @@ class ThreadBuffer(Buffer):
 
     # needed for ui.get_deep_focus..
     def get_focus(self):
+        "Get the focus from the underlying body widget."
         return self.body.get_focus()
 
     def set_focus(self, pos):
-        logging.debug('setting focus to %s ' % str(pos))
+        "Set the focus in the underlying body widget."
+        logging.debug('setting focus to %s ', pos)
         self.body.set_focus(pos)
 
     def focus_first(self):
@@ -618,10 +622,10 @@ class TagListBuffer(Buffer):
 
     modename = 'taglist'
 
-    def __init__(self, ui, alltags=[], filtfun=None):
+    def __init__(self, ui, alltags=None, filtfun=lambda x: x):
         self.filtfun = filtfun
         self.ui = ui
-        self.tags = alltags
+        self.tags = alltags or []
         self.isinitialized = False
         self.rebuild()
         Buffer.__init__(self, ui, self.body)
@@ -634,7 +638,7 @@ class TagListBuffer(Buffer):
             self.isinitialized = True
 
         lines = list()
-        displayedtags = sorted(filter(self.filtfun, self.tags),
+        displayedtags = sorted((t for t in self.tags if self.filtfun(t)),
                                key=unicode.lower)
         for (num, b) in enumerate(displayedtags):
             if (num % 2) == 0:
@@ -659,6 +663,7 @@ class TagListBuffer(Buffer):
         self.taglist.set_focus(focusposition % len(displayedtags))
 
     def focus_first(self):
+        """Focus the first line in the tag list."""
         self.body.set_focus(0)
 
     def focus_last(self):
@@ -669,6 +674,6 @@ class TagListBuffer(Buffer):
 
     def get_selected_tag(self):
         """returns selected tagstring"""
-        (cols, pos) = self.taglist.get_focus()
+        cols, _ = self.taglist.get_focus()
         tagwidget = cols.original_widget.get_focus()
         return tagwidget.get_tag()

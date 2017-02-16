@@ -1,14 +1,13 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
+from __future__ import absolute_import
+
 import os
 
-from utils import read_config
-from checks import align_mode
-from checks import attr_triple
-from checks import width_tuple
-from checks import force_list
-from errors import ConfigError
+from ..utils import configobj as checks
+from .utils import read_config
+from .errors import ConfigError
 
 DEFAULTSPATH = os.path.join(os.path.dirname(__file__), '..', 'defaults')
 DUMMYDEFAULT = ('default',) * 6
@@ -24,10 +23,10 @@ class Theme(object):
         """
         self._spec = os.path.join(DEFAULTSPATH, 'theme.spec')
         self._config = read_config(path, self._spec,
-                                   checks={'align': align_mode,
-                                           'widthtuple': width_tuple,
-                                           'force_list': force_list,
-                                           'attrtriple': attr_triple})
+                                   checks={'align': checks.align_mode,
+                                           'widthtuple': checks.width_tuple,
+                                           'force_list': checks.force_list,
+                                           'attrtriple': checks.attr_triple})
         self._colours = [1, 16, 256]
         # make sure every entry in 'order' lists have their own subsections
         threadline = self._config['search']['threadline']
@@ -106,11 +105,11 @@ class Theme(object):
         candidates = self._config['search'].sections
         for candidatename in candidates:
             candidate = self._config['search'][candidatename]
-            if candidatename.startswith('threadline') and\
-               (not candidatename == 'threadline') and\
-               matches(candidate, thread):
-                    match = candidate
-                    break
+            if (candidatename.startswith('threadline') and
+                    (not candidatename == 'threadline') and
+                    matches(candidate, thread)):
+                match = candidate
+                break
 
         # fill in values
         res = {}

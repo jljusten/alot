@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # alot documentation build configuration file
+from __future__ import absolute_import
 
 import sys, os
 
@@ -16,12 +17,12 @@ class Mock(object):
         return Mock()
 
     @classmethod
-    def __getattr__(self, name):
+    def __getattr__(cls, name):
         return Mock() if name not in ('__file__', '__path__') else '/dev/null'
 
 class MockModule(object):
     @classmethod
-    def __getattr__(self, name):
+    def __getattr__(cls, name):
         return Mock if name not in ('__file__', '__path__') else '/dev/null'
 
 MOCK_MODULES = ['twisted', 'twisted.internet',
@@ -30,6 +31,7 @@ MOCK_MODULES = ['twisted', 'twisted.internet',
                 'twisted.python.failure',
                 'twisted.internet.protocol',
                 'urwid',
+                'urwidtrees',
                 'magic',
                 'gpgme',
                 'configobj',

@@ -1,10 +1,12 @@
 # Copyright (C) 2011-2012  Patrick Totzke <patricktotzke@gmail.com>
 # This file is released under the GNU GPL, version 3 or a later revision.
 # For further details see the COPYING file
+from __future__ import absolute_import
+
 from datetime import datetime
 
-from message import Message
-from alot.settings import settings
+from .message import Message
+from ..settings import settings
 
 
 class Thread(object):
@@ -23,7 +25,11 @@ class Thread(object):
         :type thread: :class:`notmuch.database.Thread`
         """
         self._dbman = dbman
+        self._authors = None
         self._id = thread.get_thread_id()
+        self._messages = {}
+        self._tags = set()
+
         self.refresh(thread)
 
     def refresh(self, thread=None):
@@ -33,7 +39,18 @@ class Thread(object):
 
         self._total_messages = thread.get_total_messages()
         self._notmuch_authors_string = thread.get_authors()
-        self._subject = thread.get_subject()
+
+        subject_type = settings.get('thread_subject')
+        if subject_type == 'notmuch':
+            subject = thread.get_subject()
+        elif subject_type == 'oldest':
+            try:
+                first_msg = list(thread.get_toplevel_messages())[0]
+                subject = first_msg.get_header('subject')
+            except IndexError:
+                subject = ''
+        self._subject = subject
+
         self._authors = None
         ts = thread.get_oldest_date()
 
@@ -47,7 +64,7 @@ class Thread(object):
         except ValueError:  # year is out of range
             self._newest_date = None
 
-        self._tags = set([t for t in thread.get_tags()])
+        self._tags = {t for t in thread.get_tags()}
         self._messages = {}  # this maps messages to its children
         self._toplevel_messages = []
 
@@ -69,7 +86,7 @@ class Thread(object):
         """
         tags = set(list(self._tags))
         if intersection:
-            for m in self.get_messages().keys():
+            for m in self.get_messages().iterkeys():
                 tags = tags.intersection(set(m.get_tags()))
         return tags
 
@@ -133,24 +150,30 @@ class Thread(object):
     def get_authors(self):
         """
         returns a list of authors (name, addr) of the messages.
-        The authors are ordered by msg date and unique (by addr).
+        The authors are ordered by msg date and unique (by name/addr).
 
         :rtype: list of (str, str)
         """
         if self._authors is None:
+            # Sort messages with date first (by date ascending), and those
+            # without a date last.
+            msgs = sorted(self.get_messages().iterkeys(),
+                          key=lambda m: m.get_date() or datetime.max)
+
+            orderby = settings.get('thread_authors_order_by')
             self._authors = []
-            seen = {}
-            msgs = self.get_messages().keys()
-            msgs_with_date = filter(lambda m: m.get_date() is not None, msgs)
-            msgs_without_date = filter(lambda m: m.get_date() is None, msgs)
-            # sort messages with date and append the others
-            msgs_with_date.sort(None, lambda m: m.get_date())
-            msgs = msgs_with_date + msgs_without_date
-            for m in msgs:
-                pair = m.get_author()
-                if not pair[1] in seen:
-                    seen[pair[1]] = True
+            if orderby == 'latest_message':
+                for m in msgs:
+                    pair = m.get_author()
+                    if pair in self._authors:
+                        self._authors.remove(pair)
                     self._authors.append(pair)
+            else:  # i.e. first_message
+                for m in msgs:
+                    pair = m.get_author()
+                    if pair not in self._authors:
+                        self._authors.append(pair)
+
         return self._authors
 
     def get_authors_string(self, own_addrs=None, replace_own=None):
@@ -176,7 +199,7 @@ class Thread(object):
                     aname = settings.get('thread_authors_me')
                 if not aname:
                     aname = aaddress
-                if not aname in authorslist:
+                if aname not in authorslist:
                     authorslist.append(aname)
             return ', '.join(authorslist)
         else:
@@ -234,7 +257,7 @@ class Thread(object):
         """
         mid = msg.get_message_id()
         msg_hash = self.get_messages()
-        for m in msg_hash.keys():
+        for m in msg_hash.iterkeys():
             if m.get_message_id() == mid:
                 return msg_hash[m]
         return None
