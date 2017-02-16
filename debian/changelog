@@ -1,0 +1,60 @@
+alot (0.3.6-1) unstable; urgency=medium
+
+  * New upstream release
+    + Drop the GPG encoding patch, merged upstream.
+  * d/copyright: update copyright years.
+  * d/control: Bump Standard-Version to 3.9.5, no changes required
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Fri, 22 Aug 2014 12:58:24 +0200
+
+alot (0.3.5-2) unstable; urgency=low
+
+  * Drop outdated Lintian overrides for alot-doc
+  * Add a patch to fix an encoding error in the GPG handling that prevented
+    alot from opening some threads.
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Thu, 25 Jul 2013 11:05:43 +0200
+
+alot (0.3.5-1) unstable; urgency=low
+
+  [ Jakub Wilk ]
+  * Use canonical URIs for Vcs-* fields.
+
+  [ Simon Chopin ]
+  * Add w3m | links to Recommends to enable HTML rendering
+  * New upstream release
+    + Drop the backported GPGFix patch
+  * d/copyright: Bump the copyright years
+  * Bump Standard-Version to 3.9.4, no change required
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 23 Jul 2013 22:51:33 +0200
+
+alot (0.3.4-2) unstable; urgency=low
+
+  * New patch fixing ill-instantiated GPGProblem exception, thanks to 
+    Vasudev Kamath (Closes: #704884)
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 09 Apr 2013 15:33:32 +0200
+
+alot (0.3.4-1) unstable; urgency=low
+
+  * New upstream release
+  * debian/control: Add notmuch to the Recommends field
+  * debian/watch: Use plain github URLs instead of githubredir
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 26 Mar 2013 21:23:58 +0100
+
+alot (0.3.3-1) unstable; urgency=low
+
+  * New upstream release.
+  * Drop all patches, either applied upstream or became irrelevant.
+  * New patch: 0007-use-local-intersphinx-links to use local debian
+    documentation instead of fetching it on the Internet.
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 11 Sep 2012 21:04:24 -0400
+
+alot (0.3.2-1) unstable; urgency=low
+
+  * Initial release (Closes: #677522)
+
+ -- Simon Chopin <chopin.simon@gmail.com>  Tue, 28 Aug 2012 09:47:28 -0400

@@ -1,0 +1,12 @@
+Document: alot
+Title: alot
+Author: Patrick Totzke
+Abstract: text mode MUA for notmuch mail
+Section: Network/Communication
+
+Format: HTML
+Index: /usr/share/doc/alot-doc/html/index.html
+Files: /usr/share/doc/alot-doc/html/*.html
+
+Format: Text
+Files: /usr/share/doc/alot-doc/rst/*.txt

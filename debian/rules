@@ -1,0 +1,28 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --with python2,sphinxdoc
+
+override_dh_auto_build:
+	dh_auto_build
+	rm -rf $(CURDIR)/docs/build
+	$(MAKE) -C docs html man
+
+override_dh_auto_install:
+	dh_auto_install -- --install-lib=/usr/share/alot/
+
+override_dh_install:
+	dh_install
+	mv debian/alot/usr/bin/alot debian/alot/usr/share/alot/alot.bin
+	dh_link -palot /usr/share/alot/alot.bin /usr/bin/alot
+	# install the NEWS file as a changelog
+	mkdir -p debian/alot/usr/share/doc/alot/ debian/alot-doc/usr/share/doc/alot-doc/
+	cp NEWS debian/alot/usr/share/doc/alot/changelog
+	cp NEWS debian/alot-doc/usr/share/doc/alot-doc/changelog
+
+override_dh_compress:
+	dh_compress -X.html -X.txt
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf docs/build/
