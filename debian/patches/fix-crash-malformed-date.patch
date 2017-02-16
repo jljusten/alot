@@ -1,0 +1,15 @@
+Subject: Fix crash when email's date is malformated
+Origin: upstream
+Applied-Upstream: https://github.com/pazz/alot/commit/814e945c8696954aaad697a6caafdd44638ef40f
+--- a/alot/widgets/search.py	2015-12-21 22:15:07.000000000 +0100
++++ b/alot/widgets/search.py	2016-08-24 22:02:03.803918450 +0200
+@@ -54,7 +54,8 @@
+             datestring = ''
+             if self.thread:
+                 newest = self.thread.get_newest_date()
+-                datestring = settings.represent_datetime(newest)
++                if newest != None:
++                    datestring = settings.represent_datetime(newest)
+             datestring = pad(datestring)
+             width = len(datestring)
+             part = AttrFlipWidget(urwid.Text(datestring), struct['date'])

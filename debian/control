@@ -2,32 +2,35 @@ Source: alot
 Section: mail
 Priority: optional
 Maintainer: Python Applications Packaging Team <python-apps-team@lists.alioth.debian.org>
-Uploaders: Simon Chopin <chopin.simon@gmail.com>
-Build-Depends:
- debhelper (>= 9),
- python (>= 2.7),
- python-sphinx (>= 1.0.7+dfsg),
- python-doc,
- python-configobj
+Uploaders: Simon Chopin <chopin.simon@gmail.com>,
+           Hugo Lefeuvre <hle@debian.org>
+Build-Depends: debhelper (>= 9),
+               dh-python,
+               python (>= 2.7),
+               python-configobj,
+               python-doc,
+               python-setuptools,
+               python-sphinx (>= 1.0.7+dfsg)
 X-Python-Version: >= 2.7
-Standards-Version: 3.9.5
-Homepage: http://github.com/pazz/alot/
-Vcs-Svn: svn://anonscm.debian.org/python-apps/packages/alot/trunk/
-Vcs-Browser: http://anonscm.debian.org/viewvc/python-apps/packages/alot/trunk/
+Standards-Version: 3.9.8
+Homepage: https://github.com/pazz/alot/
+Vcs-Svn: https://anonscm.debian.org/python-apps/packages/alot/trunk/
+Vcs-Browser: https://anonscm.debian.org/viewvc/python-apps/packages/alot/trunk/
 
 Package: alot
 Architecture: all
-Depends:
- ${misc:Depends},
- ${python:Depends},
- python-notmuch (>= 0.12),
- python-magic,
- python-configobj (>= 4.6.0),
- python-twisted (>= 10.2.0),
- python-gpgme,
- python-urwid (>= 1.0)
+Depends: python-configobj (>= 4.6.0),
+         python-gpgme,
+         python-magic,
+         python-notmuch (>= 0.12),
+         python-twisted (>= 10.2.0),
+         python-urwid (>= 1.0),
+         python-urwidtrees (>= 1.0),
+         ${misc:Depends},
+         ${python:Depends}
 Suggests: alot-doc
-Recommends: notmuch, w3m | links | links2
+Recommends: notmuch,
+            w3m | links | links2
 Description: Text mode MUA using notmuch mail
  Alot is a text mode mail user agent for the notmuch mail system.
  It features a modular and command prompt driven interface to provide
@@ -37,7 +40,8 @@ Description: Text mode MUA using notmuch mail
 Package: alot-doc
 Architecture: all
 Section: doc
-Depends: ${misc:Depends}, ${sphinxdoc:Depends}
+Depends: ${misc:Depends},
+         ${sphinxdoc:Depends}
 Suggests: python-doc
 Description: Text mode MUA using notmuch mail - documentation
  Alot is a terminal-based mail user agent for the notmuch mail system.
