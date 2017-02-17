@@ -1,4 +1,4 @@
-alot (0.5.1-1) UNRELEASED; urgency=low
+alot (0.5.1-1) experimental; urgency=low
 
   * New upstream release (Closes: #848150).
   * Add Jordan as uploader.
