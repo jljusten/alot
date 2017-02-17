@@ -1,1 +1,2 @@
 0001-Description-Use-local-intersphinx-inventories.patch
+0002-debian-Use-file-magic-instead-of-python-magic-in-set.patch

@@ -1,10 +1,10 @@
 From 69160e3e58693d2e5bf03160dfde24062bdf5493 Mon Sep 17 00:00:00 2001
 From: Simon Chopin <chopin.simon@gmail.com>
 Date: Thu, 16 Feb 2017 16:30:46 -0800
-Subject: [PATCH] Description: Use local intersphinx inventories.  Fetching the
- inventories off the Internet made the build unreliable.  This patch turns off
- the intersphinx feature for notmuch and urwid since  they don't have a -doc
- sphinx package yet. This patch only makes sense in  the Debian context.
+Subject: [PATCH 1/2] Description: Use local intersphinx inventories.  Fetching
+ the inventories off the Internet made the build unreliable.  This patch turns
+ off the intersphinx feature for notmuch and urwid since  they don't have a
+ -doc sphinx package yet. This patch only makes sense in  the Debian context.
  Author: Simon Chopin <chopin.simon@gmail.com> Forwarded: not-needed --- This
  patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 
