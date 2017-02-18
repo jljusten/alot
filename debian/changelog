@@ -1,6 +1,6 @@
 alot (0.5.1-1) UNRELEASED; urgency=low
 
-  * New upstream release (Closes: #848150).
+  * New upstream release (Closes: #848150, #792108).
   * Add new patch for python-magic=>file-magic rename
   * Add Jordan as uploader.
 
