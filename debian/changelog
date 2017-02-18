@@ -1,6 +1,7 @@
 alot (0.5.1-1) UNRELEASED; urgency=low
 
   * New upstream release (Closes: #848150).
+  * Add new patch for python-magic=>file-magic rename
   * Add Jordan as uploader.
 
   * The remaining changes were contributed by Hugo Lefeuvre <hle@debian.org>
