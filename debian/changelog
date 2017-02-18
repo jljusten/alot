@@ -4,6 +4,7 @@ alot (0.5.1-1) UNRELEASED; urgency=low
   * Add new patch for python-magic=>file-magic rename
   * Add Jordan as uploader.
   * Update source compat from 9 to 10
+  * Use debhelper pybuild (Closes: #855559)
 
   * The remaining changes were contributed by Hugo Lefeuvre <hle@debian.org>
     for an unreleased 0.3.7-1 version:

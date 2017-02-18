@@ -10,8 +10,15 @@ Build-Depends: debhelper (>= 10),
                python (>= 2.7),
                python-configobj,
                python-doc,
+               python-gpgme,
+               python-magic,
+               python-mock,
+               python-notmuch (>= 0.12),
                python-setuptools,
-               python-sphinx (>= 1.0.7+dfsg)
+               python-sphinx (>= 1.0.7+dfsg),
+               python-twisted (>= 10.2.0),
+               python-urwid (>= 1.0),
+               python-urwidtrees (>= 1.0)
 X-Python-Version: >= 2.7
 Standards-Version: 3.9.8
 Homepage: https://github.com/pazz/alot/

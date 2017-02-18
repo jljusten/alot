@@ -3,16 +3,15 @@
 LAST_CHANGE=$(shell dpkg-parsechangelog -S Date)
 BUILD_DATE=$(shell LC_ALL=C date -u "+%B %d, %Y" -d "$(LAST_CHANGE)")
 
+export PYBUILD_INSTALL_ARGS=--install-lib=/usr/share/alot/
+
 %:
-	dh $@ --with python2,sphinxdoc
+	dh $@ --with python2,sphinxdoc --buildsystem=pybuild
 
 override_dh_auto_build:
 	dh_auto_build
 	rm -rf $(CURDIR)/docs/build
 	$(MAKE) -C docs html man SPHINXOPTS="-D today=\"$(BUILD_DATE)\""
-
-override_dh_auto_install:
-	dh_auto_install -- --install-lib=/usr/share/alot/
 
 override_dh_install:
 	dh_install
