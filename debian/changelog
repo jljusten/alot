@@ -3,10 +3,8 @@ alot (0.5.1-1) UNRELEASED; urgency=low
   * New upstream release (Closes: #848150).
   * Add Jordan as uploader.
 
- -- Jordan Justen <jordan.l.justen@intel.com>  Thu, 16 Feb 2017 15:28:40 -0800
-
-alot (0.3.7-1) unstable; urgency=medium
-
+  * The remaining changes were contributed by Hugo Lefeuvre <hle@debian.org>
+    for an unreleased 0.3.7-1 version:
   * New upstream release (Closes: #814460).
   * Run wrap-and-sort -a.
   * debian/control:
@@ -27,7 +25,7 @@ alot (0.3.7-1) unstable; urgency=medium
     - Remove extra timestamps from the build system when creating the
       source archive (Closes: #784723).
 
- -- Hugo Lefeuvre <hle@debian.org>  Wed, 24 Aug 2016 21:42:50 +0200
+ -- Jordan Justen <jordan.l.justen@intel.com>  Thu, 16 Feb 2017 15:28:40 -0800
 
 alot (0.3.6-1) unstable; urgency=medium
 
