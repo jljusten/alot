@@ -1,4 +1,4 @@
-alot (0.5.1-1) UNRELEASED; urgency=low
+alot (0.5.1-1) experimental; urgency=low
 
   * New upstream release (Closes: #848150, #792108).
   * Add new patch for python-magic=>file-magic rename
@@ -30,7 +30,7 @@ alot (0.5.1-1) UNRELEASED; urgency=low
     - Remove extra timestamps from the build system when creating the
       source archive (Closes: #784723).
 
- -- Jordan Justen <jordan.l.justen@intel.com>  Thu, 16 Feb 2017 15:28:40 -0800
+ -- Jordan Justen <jordan.l.justen@intel.com>  Tue, 21 Feb 2017 01:14:49 -0800
 
 alot (0.3.6-1) unstable; urgency=medium
 
