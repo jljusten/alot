@@ -27,7 +27,7 @@ Vcs-Browser: https://anonscm.debian.org/viewvc/python-apps/packages/alot/trunk/
 
 Package: alot
 Architecture: all
-Depends: python-configobj (>= 4.6.0),
+Depends: python-configobj,
          python-gpgme,
          python-magic,
          python-notmuch,
