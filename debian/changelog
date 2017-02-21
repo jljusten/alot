@@ -5,6 +5,8 @@ alot (0.5.1-1) UNRELEASED; urgency=low
   * Add Jordan as uploader.
   * Update source compat from 9 to 10
   * Use debhelper pybuild (Closes: #855559)
+  * Adjust dependencies based on setup.py and removed dependencies
+    where oldstable/wheezy already met the requirement
 
   * The remaining changes were contributed by Hugo Lefeuvre <hle@debian.org>
     for an unreleased 0.3.7-1 version:
